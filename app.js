@@ -354,7 +354,7 @@ function drawJourneyFromMedalsData(medalsData){
   const color = d3.scaleOrdinal()
     .domain(subgroups)
     .range(['#FFD700','#C0C0C0','#CD7F32'])
-
+ 
 
   // Show the bars
   bar = graph.append("g")
