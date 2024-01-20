@@ -1,45 +1,32 @@
 // the map
-const width = window.innerWidth*0.8;
-const height = window.innerHeight*0.9;
+const width = window.innerWidth*0.7;
+const height = window.innerHeight*0.85;
 
-const rootSvg = d3.select('body')    
+const rootSvg = d3.select('.map')    
               .append('svg')
               .attr('class', 'rootSvg')
               .attr('width', width)
               .attr('height', height);
 
-      
+       
 const svg = d3.select('.rootSvg')
     .append('svg')
+    .attr('class' , 'svg')
     .attr('width', width)
     .attr('height', height*0.8);
 
 // Group for the map
 const g = svg.append('g');
 
-// Arrowhead
-g.append("defs")
-  .append("marker")
-    .attr("id", "arrowhead")
-    .attr("viewBox", "-0 -5 10 10")
-    .attr("refX", 5)
-    .attr("refY", 0)
-    .attr("orient", "auto")
-    .attr("markerWidth", 6)
-    .attr("markerHeight", 6)
-    .attr("xoverflow", "visible")
-    .append("svg:path")
-    .attr("d", "M 0,-5 L 10 ,0 L 0,5")
-    .attr("fill", "#999")
-    .style("stroke","none");
     
 // SVG for the graph
 const graph = rootSvg.append('svg')
+                  .attr('class' , 'graph')
                   .attr('x', width*0.1)
-                  .attr('y', height*0.8);
+                  .attr('y', height*0.75);
  
  // Projection
-const projection = d3.geoMercator().scale(170).translate([width / 2, height / 1.5]);
+const projection = d3.geoMercator().scale(150).translate([width / 2, height / 1.5]);
 const pathGenerator = d3.geoPath(projection);
 
 // Zoom
@@ -146,7 +133,7 @@ function pointsToPath(linePropObject, randomSlope, randomCurve,randomInvert) {
   }
 
 
-function buildAthleteMedalFromId(athleteId, jsonData, year = null){
+function buildAthleteMedalFromId(athleteId, jsonData, gamesData, year = null){
   let medals = [];
   const athleteInfo = jsonData[athleteId.toString()];
   // console.log(athleteInfo);
@@ -154,13 +141,13 @@ function buildAthleteMedalFromId(athleteId, jsonData, year = null){
   for (let gameYear in athleteInfo['games_participation']) {
       
       const gameDetails = athleteInfo['games_participation'][gameYear];
-      // const countryOfGames = gameDetails['games_country_name'];
+      const cityOfGames = gamesData.filter(d => d['edition_id'] === gameDetails['games_id'].toString())[0]['city'];
       const gold =  gameDetails['gold'];
       const silver = gameDetails['silver'];
       const bronze = gameDetails['bronze'];
 
       if (year === null || gameYear >= year) {
-        medals.push({'gameYear': gameYear, 'gold': gold, 'silver': silver, 'bronze': bronze});
+        medals.push({'gameYear': gameYear, 'gold': gold, 'silver': silver, 'bronze': bronze, 'city': cityOfGames});
       }
     }
 
@@ -180,7 +167,7 @@ function buildYearParticipationFromAthleteList(athleteList, jsonData){
   return yearParticipation;
 }
 
-function buildCountryMedalFromAthleteList(countryName,athleteList, jsonData, medalCountryData, year = null){
+function buildCountryMedalFromAthleteList(countryName, athleteList, jsonData, medalCountryData, gamesData, year = null){
 
   let medals = [];
   const yearParticipation = buildYearParticipationFromAthleteList(athleteList, jsonData);
@@ -188,11 +175,12 @@ function buildCountryMedalFromAthleteList(countryName,athleteList, jsonData, med
 
   for (let gameYear of yearParticipation){
     const medalInfoForCountry = medalCountryData.filter(d => d['country'] === countryName && d['year'] === gameYear)[0];
-    // console.log(medalInfoForCountry);
+    // console.log(yearParticipation);
+    const cityOfGames = gamesData.filter(d => d['year'] === gameYear)[0]['city'];
     if (medalInfoForCountry !== undefined){
-      medals.push({'gameYear': gameYear, 'gold': medalInfoForCountry['gold'], 'silver': medalInfoForCountry['silver'], 'bronze': medalInfoForCountry['bronze']});
+      medals.push({'gameYear': gameYear, 'gold': medalInfoForCountry['gold'], 'silver': medalInfoForCountry['silver'], 'bronze': medalInfoForCountry['bronze'], 'city' : cityOfGames });
     } else {
-      medals.push({'gameYear': gameYear, 'gold': 0, 'silver': 0, 'bronze': 0});
+      medals.push({'gameYear': gameYear, 'gold': 0, 'silver': 0, 'bronze': 0, 'city' : cityOfGames });
     }
   }
   return medals;
@@ -212,7 +200,7 @@ function buildAthleteListFromACountry(countryCode, jsonData, year = 2016){
 }
 
 
-function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData){
+function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gamesData){
   // console.log(athleteBioData);
   // Clear all intervals before removing the paths
   intervalIds.forEach(clearInterval);
@@ -266,9 +254,9 @@ function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData){
   
       // Get the athlete id from the path
       const athlete_id = d3.select(this).attr("class").split("path")[1];
+      // console.log(athlete_id);
       
-
-      const medalsData = buildAthleteMedalFromId(athlete_id, athleteData);
+      const medalsData = buildAthleteMedalFromId(athlete_id, athleteData, gamesData);
       drawJourneyFromMedalsData(medalsData);
       const athleteBio =  buildAthletBioFromId(athlete_id,athleteData,athleteBioData);
       displayBio(athleteBio);
@@ -320,14 +308,14 @@ function drawJourneyFromMedalsData(medalsData){
   graph.selectAll(".bar").remove();
   graph.selectAll(".axis").remove();
 
-  const svg_width = 700 // - margin.left - margin.right,
-  const svg_height = 100 // - margin.top - margin.bottom;
+  const svg_width = width*0.8 // - margin.left - margin.right,
+  const svg_height = 120 // - margin.top - margin.bottom;
 
   // List of subgroups = header of the csv files = soil condition here
   const subgroups = ['gold','silver','bronze']
 
   // List of groups = species here = value of the first column called group -> I show them on the X axis
-  const groups = d3.map(medalsData, function(d){return(d.gameYear)}).keys()
+  const groups = d3.map(medalsData, function(d){return(d.gameYear+" : "+d.city)}).keys()
 
   // Add X axis
   const x = d3.scaleBand()
@@ -342,7 +330,8 @@ function drawJourneyFromMedalsData(medalsData){
   // Customize tick labels
   xAxis.selectAll("text")
   .style("font-family", "Poppins")  // replace with your desired font
-  .style("font-size", "12px");
+  .style("font-weight", "bold")
+  .style("font-size", "1em")
 
   // Add Y axis
   const maxY = 5;
@@ -378,7 +367,7 @@ function drawJourneyFromMedalsData(medalsData){
     .data(medalsData)
     .enter()
     .append("g")
-    .attr("transform", function(d) { return "translate(" + x(d.gameYear) + ",0)"; })
+    .attr("transform", function(d) { return "translate(" + x(d.gameYear+ ' : '+ d.city) + ",0)"; })
     .selectAll("rect")
     .data(function(d) { return subgroups.map(function(key) { return {key: key, value: d[key]}; }); })
     .enter()
@@ -399,25 +388,53 @@ function drawJourneyFromMedalsData(medalsData){
       .attr("x", function(d) { return xSubgroup(d.key); })
       .attr("y", function(d) { return  y(2) + y(maxY-1) / 2; })
       .attr("text-anchor", "middle")
-      .style("font-family", "Poppins")  // replace with your desired font
+      .style("font-family", "Poppins")  
       .style("font-weight", "bold")
       .style("font-size", "12px")
       .style("fill", "darkblue")
       .attr("dominant-baseline", "middle")
     }
 
+function buildAthletBioFromId(athleteId,athleteData,athleteBioData){
+  // console.log(athleteBioData)
+  // athleteBioData = await d3.csv('./Olympics Data From 1986 to 2022/Olympic_Athlete_Bio.csv')
+
+  const athleteBio = athleteBioData.filter(d => d['athlete_id'] === athleteId.toString())[0];
+  const athleteSport = athleteData[athleteId.toString()]['sport_type'];
+  // console.log(athleteSport);
+  athleteBio['sport_type'] = athleteSport;
+  return athleteBio;
+}
+
+function displayBio(bio){
+  const bioDiv = d3.select(".bio");
+  bioDiv.selectAll("div").remove();
+  bioDiv.html(`
+  <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Name:</span> ${bio.name}</div>
+  <div class = 'bioInformation'><span style="font-weight: bold; text-decoration: underline;"> Sports:</span> ${bio.sport_type}</div>
+  <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Date of Birth:</span> ${bio.born}</div>
+  <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Country:</span> ${bio.country}</div>
+  <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Sex:</span> ${bio.sex}</div>
+  <div style="font-weight: bold; text-decoration: underline; "> Description:</div> <div class = 'bioDescription'>${bio.description}</div>  `);
+}
 
 // Declare a variable to hold the interval IDs
 let intervalIds = [];
 id_to_plot = ["103315","11524","127932","47512","133746"];
 
+
+// Show the loading screen
+document.getElementById('loading').style.display = 'block';
+
 Promise.all([
   d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json'),
   d3.json('./athlete_data_medals.json'),
   d3.csv('./Olympics Data From 1986 to 2022/Olympic_Athlete_Bio.csv'),
-  d3.csv('./Olympics Data From 1986 to 2022/Olympic_Games_Medal_Tally.csv')
-]).then(([data, athleteData, athleteBioData, medalCountryData]) => {
+  d3.csv('./Olympics Data From 1986 to 2022/Olympic_Games_Medal_Tally.csv'),
+  d3.csv('./Olympics Data From 1986 to 2022/Olympics_Games.csv')
+]).then(([data, athleteData, athleteBioData, medalCountryData, gamesData]) => {
 
+        document.getElementById('loading').style.display = 'none';
         const countries = topojson.feature(data, data.objects.countries);
         // console.log(countries);
         // const athlete_id = "103315";
@@ -445,41 +462,16 @@ Promise.all([
 
         
         countriesPath.on("click", function(event, d) {
+          const bioDiv = d3.select(".bio");
+          bioDiv.selectAll("div").remove();
           const countryName = event.properties.name;
           // console.log(athleteBioData)
           const athleteList = buildAthleteListFromACountry(countryName, athleteData);
-          drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData);
-          const countryMedals = buildCountryMedalFromAthleteList(countryName, athleteList, athleteData, medalCountryData);
+          drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gamesData);
+          const countryMedals = buildCountryMedalFromAthleteList(countryName, athleteList, athleteData, medalCountryData, gamesData);
         
           drawJourneyFromMedalsData(countryMedals);
         });
 
-        drawPathFromAnAthleteList(id_to_plot,athleteData,athleteBioData);
-        });
-
-
-
-function buildAthletBioFromId(athleteId,athleteData,athleteBioData){
-  // console.log(athleteBioData)
-  // athleteBioData = await d3.csv('./Olympics Data From 1986 to 2022/Olympic_Athlete_Bio.csv')
-
-  const athleteBio = athleteBioData.filter(d => d['athlete_id'] === athleteId.toString())[0];
-  const athleteSport = athleteData[athleteId.toString()]['sport_type'];
-  // console.log(athleteSport);
-  athleteBio['sport_type'] = athleteSport;
-  return athleteBio;
-}
-
-function displayBio(bio){
-  const bioDiv = d3.select(".bio");
-  bioDiv.selectAll("p").remove();
-  bioDiv.html(`
-  <h2>${bio.name}</h2>
-  <h2>${bio.sport_type}</h2>
-  <h2>${bio.born}</h2>
-  <h2>${bio.country}</h2>
-  <h2>${bio.sex}</h2>
-  <p>${bio.description}</p> 
-`);
-}
-
+        drawPathFromAnAthleteList(id_to_plot, athleteData, athleteBioData, gamesData);
+});
