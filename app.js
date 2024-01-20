@@ -545,7 +545,7 @@ Promise.all([
                   .attr('fill', 'url(#greyDots)');  // replace "#dots" with the id of your original dot pattern
           });
 
-        
+         
         countriesPath.on("click", function(event, d) {
           const bioDiv = d3.select(".bio");
           bioDiv.selectAll("div").remove();
