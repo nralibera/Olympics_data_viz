@@ -6,6 +6,9 @@ body {
   overflow: hidden;
 }
 
+.title{
+  font-size: 1.5em;
+}
 .mapAndOptions{
   display: flex;
   flex-direction: column;

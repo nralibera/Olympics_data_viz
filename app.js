@@ -13,7 +13,7 @@ const svg = d3.select('.rootSvg')
     .append('svg')
     .attr('class' , 'svg')
     .attr('width', width)
-    .attr('height', height*0.8);
+    .attr('height', height*0.7);
 
 // Group for the map
 const g = svg.append('g');
@@ -23,10 +23,10 @@ const g = svg.append('g');
 const graph = rootSvg.append('svg')
                   .attr('class' , 'graph')
                   .attr('x', width*0.1)
-                  .attr('y', height*0.75);
+                  .attr('y', height*0.6);
  
  // Projection
-const projection = d3.geoMercator().scale(150).translate([width / 2, height / 1.5]);
+const projection = d3.geoMercator().scale(170).translate([width / 2, height / 1.7]);
 const pathGenerator = d3.geoPath(projection);
 
 // Zoom
@@ -167,14 +167,14 @@ function buildYearParticipationFromAthleteList(athleteList, jsonData){
   return yearParticipation;
 }
 
-function buildCountryMedalFromAthleteList(countryName, athleteList, jsonData, medalCountryData, gamesData, year = null){
+function buildCountryMedalFromAthleteList(countryNoc, athleteList, jsonData, medalCountryData, gamesData, year = null){
 
   let medals = [];
   const yearParticipation = buildYearParticipationFromAthleteList(athleteList, jsonData);
   // console.log(yearParticipation);
-
+  
   for (let gameYear of yearParticipation){
-    const medalInfoForCountry = medalCountryData.filter(d => d['country'] === countryName && d['year'] === gameYear)[0];
+    const medalInfoForCountry = medalCountryData.filter(d => d['country_noc'] === countryNoc && d['year'] === gameYear)[0];
     // console.log(yearParticipation);
     const cityOfGames = gamesData.filter(d => d['year'] === gameYear)[0]['city'];
     if (medalInfoForCountry !== undefined){
@@ -183,6 +183,7 @@ function buildCountryMedalFromAthleteList(countryName, athleteList, jsonData, me
       medals.push({'gameYear': gameYear, 'gold': 0, 'silver': 0, 'bronze': 0, 'city' : cityOfGames });
     }
   }
+  medals.sort((a, b) => a.gameYear - b.gameYear);
   return medals;
   }
 
@@ -192,7 +193,7 @@ function buildAthleteListFromACountry(countryCode, jsonData, year = 2016){
 
   for (let athleteId in jsonData) {
     let athleteInfo = jsonData[athleteId.toString()];
-    if (athleteInfo['athlete_country_name'] === countryCode && athleteInfo['games_participation'][year] !== undefined) {
+    if (athleteInfo['athlete_country_code'] === countryCode && athleteInfo['games_participation'][year] !== undefined) {
       athleteList.push(athleteId);
     }
   }
@@ -303,6 +304,15 @@ function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gam
     });
 }
 
+function mapRange(value) {
+  const inputMin = 12;
+  const inputMax = 16;
+  const outputMin = 42;
+  const outputMax = 48;
+
+  return ((value - inputMin) / (inputMax - inputMin)) * (outputMax - outputMin) + outputMin;
+}
+
 function drawJourneyFromMedalsData(medalsData){
   // Clean Graph before redrawing
   graph.selectAll(".bar").remove();
@@ -325,19 +335,32 @@ function drawJourneyFromMedalsData(medalsData){
   const xAxis = graph.append("g")
     .attr("transform", "translate(0," + svg_height*0.9 + ")")
     .attr("class","axis")
-    .call(d3.axisBottom(x));
+    .call(d3.axisBottom(x))
+     // adjust this value as needed
+
+  const fontSize = Math.min(Math.max(x.bandwidth() / 20, 10), 16); 
 
   // Customize tick labels
   xAxis.selectAll("text")
+  .attr("y", -mapRange(fontSize))
   .style("font-family", "Poppins")  // replace with your desired font
   .style("font-weight", "bold")
-  .style("font-size", "1em")
+  .style("font-size", function(d) {  // adjust this value as needed
+    return fontSize + "px"; 
+  })
+
 
   // Add Y axis
   const maxY = 5;
   const y = d3.scaleLinear()
     .domain([0, maxY])
     .range([ svg_height, 0 ]);
+
+  // Y axis for dots
+  const maxYDots = 18;
+  const yDots = d3.scaleLinear()
+    .domain([0, maxYDots])
+    .range([ svg_height, 2*svg_height ]);
 
   graph.append("g")
     .attr("class","axis")
@@ -347,8 +370,8 @@ function drawJourneyFromMedalsData(medalsData){
   // Another scale for subgroup position?
   const xSubgroup = d3.scaleBand()
     .domain(subgroups)
-    .range([0, x.bandwidth()])
-    .padding([0.5])
+    .range([x.bandwidth()/4, 3*x.bandwidth()/4])
+    .padding(0.1)
 
   // color palette = one color per subgroup
   const color = d3.scaleOrdinal()
@@ -375,7 +398,7 @@ function drawJourneyFromMedalsData(medalsData){
     
     bar.append("rect")
       .attr("x", function(d) { return xSubgroup(d.key); })
-      .attr("y", function(d) { return y(1); })
+      .attr("y", function(d) { return y(0+0.7); })
       .attr("width", xSubgroup.bandwidth())
       .attr("height", y(maxY-1))//function(d) { return height - y(d.value); })
       .attr("fill", function(d) { return color(d.key); })
@@ -386,13 +409,62 @@ function drawJourneyFromMedalsData(medalsData){
     bar.append('text')
       .text(function(d) { return d.value; })
       .attr("x", function(d) { return xSubgroup(d.key); })
-      .attr("y", function(d) { return  y(2) + y(maxY-1) / 2; })
+      .attr("y", function(d) { return  y(1+0.7) + y(maxY-1) / 2; })
       .attr("text-anchor", "middle")
       .style("font-family", "Poppins")  
       .style("font-weight", "bold")
       .style("font-size", "12px")
       .style("fill", "darkblue")
       .attr("dominant-baseline", "middle")
+
+  // Show the same amount of dot per medal number on each categories
+
+  dots_bar = graph.append("g")
+  .attr("class","bar")
+  .attr("transform", function(d) { 
+    return "translate(" + (xSubgroup.bandwidth() / 2 ) + ",0)"; 
+  })
+  .selectAll("g")
+  // Enter in data = loop group per group
+  .data(medalsData)
+  .enter()
+  .append("g")
+  .attr("transform", function(d) { return "translate(" + x(d.gameYear+ ' : '+ d.city) + ",0)"; })
+  .selectAll("rect")
+  .data(function(d) { return subgroups.map(function(key) { return {key: key, value: d[key]}; }); })
+  .enter()
+  .append("g")
+  .each(function(medalType) {
+    // console.log(medalType);
+    d3.select(this)
+      .selectAll('circle')
+      .data(d3.range(medalType.value)) // create an array with as many elements as d.value
+      .enter()
+      .append('circle')
+      .attr("cx", function(d,i) { 
+        let xCorrd;
+        if (medalType.value > 18) {
+          const bandwidth = xSubgroup.bandwidth();
+           xCorrd = i < 18 ? xSubgroup(medalType.key) - bandwidth / 4 : xSubgroup(medalType.key) + bandwidth / 4;
+           if (medalType.value > 36){
+            xCorrd = i < 18 ? xSubgroup(medalType.key) - bandwidth / 4 : i < 36 ? xSubgroup(medalType.key) : xSubgroup(medalType.key) + bandwidth / 4;
+           }
+        } else {
+           xCorrd = xSubgroup(medalType.key)
+        };
+        return xCorrd } ) // adjust as needed
+      .attr("cy",  function (d, i) { return yDots(i%18); })
+      .attr("r", function(d,i) { 
+        let radius;
+        if (medalType.value > 36) {
+            radius = 2;
+        } else {
+            radius = 2.5;
+        };
+        return radius } )
+      .style("fill", function (d) { return color(medalType.key) } ) // adjust as needed
+  });
+
     }
 
 function buildAthletBioFromId(athleteId,athleteData,athleteBioData){
@@ -418,10 +490,22 @@ function displayBio(bio){
   <div style="font-weight: bold; text-decoration: underline; "> Description:</div> <div class = 'bioDescription'>${bio.description}</div>  `);
 }
 
+function getCountryCodeFromCountryMapName(countryMapName,olympicsCountryData,isOlympicCode = false){
+  if (countryMapName === "Greenland"){
+    countryMapName = "Denmark";
+  }
+  let inter_code;
+  if (!isOlympicCode){
+     inter_code = olympicsCountryData.filter(d => d['map_name'] === countryMapName)[0]['inter_code'];
+  } else{
+    inter_code = olympicsCountryData.filter(d => d['map_name'] === countryMapName)[0]['country_noc'];
+  }
+  
+  return inter_code;
+}
 // Declare a variable to hold the interval IDs
 let intervalIds = [];
 id_to_plot = ["103315","11524","127932","47512","133746"];
-
 
 // Show the loading screen
 document.getElementById('loading').style.display = 'block';
@@ -431,8 +515,9 @@ Promise.all([
   d3.json('./athlete_data_medals.json'),
   d3.csv('./Olympics Data From 1986 to 2022/Olympic_Athlete_Bio.csv'),
   d3.csv('./Olympics Data From 1986 to 2022/Olympic_Games_Medal_Tally.csv'),
-  d3.csv('./Olympics Data From 1986 to 2022/Olympics_Games.csv')
-]).then(([data, athleteData, athleteBioData, medalCountryData, gamesData]) => {
+  d3.csv('./Olympics Data From 1986 to 2022/Olympics_Games.csv'),
+  d3.csv('./Olympics Data From 1986 to 2022/Olympics_Country.csv')
+]).then(([data, athleteData, athleteBioData, medalCountryData, gamesData, olympicsCountryData]) => {
 
         document.getElementById('loading').style.display = 'none';
         const countries = topojson.feature(data, data.objects.countries);
@@ -465,10 +550,13 @@ Promise.all([
           const bioDiv = d3.select(".bio");
           bioDiv.selectAll("div").remove();
           const countryName = event.properties.name;
-          // console.log(athleteBioData)
-          const athleteList = buildAthleteListFromACountry(countryName, athleteData);
+
+          const countryCode = getCountryCodeFromCountryMapName(countryName,olympicsCountryData);
+
+          const athleteList = buildAthleteListFromACountry(countryCode, athleteData);
           drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gamesData);
-          const countryMedals = buildCountryMedalFromAthleteList(countryName, athleteList, athleteData, medalCountryData, gamesData);
+          const countryNoc = getCountryCodeFromCountryMapName(countryName,olympicsCountryData,true);
+          const countryMedals = buildCountryMedalFromAthleteList(countryNoc, athleteList, athleteData, medalCountryData, gamesData);
         
           drawJourneyFromMedalsData(countryMedals);
         });
