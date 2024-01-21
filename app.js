@@ -13,7 +13,7 @@ const svg = d3.select('.rootSvg')
     .append('svg')
     .attr('class' , 'svg')
     .attr('width', width)
-    .attr('height', height*0.7);
+    .attr('height', height*0.67);
 
 // Group for the map
 const g = svg.append('g');
@@ -26,7 +26,7 @@ const graph = rootSvg.append('svg')
                   .attr('y', height*0.6);
  
  // Projection
-const projection = d3.geoMercator().scale(170).translate([width / 2, height / 1.7]);
+const projection = d3.geoMercator().scale(160).translate([width / 2, height / 1.9]);
 const pathGenerator = d3.geoPath(projection);
 
 // Zoom
@@ -107,13 +107,28 @@ function buildAthletePath(athleteId, jsonData, year = null) {
   return link;
 }
 
-function pointsToPath(linePropObject, randomSlope, randomCurve,randomInvert) {
+function pointsToPath(linePropObject, randomSlope, randomCurve, randomInvert) {
+  // if linePropObject is a list of paths then we need to loop over the list
+  if (Array.isArray(linePropObject)) {
+    let pathString = '';
+    for (let line of linePropObject) {
+      pathString += pointsToPath(line, randomSlope, randomCurve, randomInvert);
+    }
+    return pathString;
+  }
+
   fromX = projection(linePropObject.coordinates[0])[0];
   fromY = projection(linePropObject.coordinates[0])[1];
   toX = projection(linePropObject.coordinates[1])[0];
   toY = projection(linePropObject.coordinates[1])[1];
 
-  
+  //   // A path generator
+  // max = 1.1;
+  // min = 0.9;
+
+  // const randomInvert = Math.random() < 0.5 ? -1 : 1;
+  // const randomSlope = Math.random() * (max - min + 1) + min; 
+  // const randomCurve = Math.random() * (1.7 - 0.95 + 1) + min; 
   const centerPoint = [ (fromX + toX) / 2, (fromY + toY) / 2];
   const slope = (toY - fromY) / (toX - fromX);
   const invSlope = -1 / slope;
@@ -171,19 +186,35 @@ function buildCountryMedalFromAthleteList(countryNoc, athleteList, jsonData, med
 
   let medals = [];
   const yearParticipation = buildYearParticipationFromAthleteList(athleteList, jsonData);
-  // console.log(yearParticipation);
   
   for (let gameYear of yearParticipation){
-    const medalInfoForCountry = medalCountryData.filter(d => d['country_noc'] === countryNoc && d['year'] === gameYear)[0];
-    // console.log(yearParticipation);
     const cityOfGames = gamesData.filter(d => d['year'] === gameYear)[0]['city'];
-    if (medalInfoForCountry !== undefined){
-      medals.push({'gameYear': gameYear, 'gold': medalInfoForCountry['gold'], 'silver': medalInfoForCountry['silver'], 'bronze': medalInfoForCountry['bronze'], 'city' : cityOfGames });
-    } else {
-      medals.push({'gameYear': gameYear, 'gold': 0, 'silver': 0, 'bronze': 0, 'city' : cityOfGames });
+
+    if (Array.isArray(countryNoc)){
+      let gold = 0;
+      let silver = 0;
+      let bronze = 0;
+      for(let countryNocIter of countryNoc){
+        const medalInfoForCountry = medalCountryData.filter(d => d['country_noc'] === countryNocIter && d['year'] === gameYear)[0];
+        if (medalInfoForCountry !== undefined){
+          gold +=parseInt(medalInfoForCountry['gold'],10);
+          silver +=parseInt(medalInfoForCountry['silver'],10);
+          bronze +=parseInt(medalInfoForCountry['bronze'],10);
+        } 
+      }
+      medals.push({'gameYear': gameYear, 'gold': gold, 'silver': silver, 'bronze': bronze, 'city' : cityOfGames });
+    }else{
+      const medalInfoForCountry = medalCountryData.filter(d => d['country_noc'] === countryNoc && d['year'] === gameYear)[0];
+      if (medalInfoForCountry !== undefined){
+        medals.push({'gameYear': gameYear, 'gold': medalInfoForCountry['gold'], 'silver': medalInfoForCountry['silver'], 'bronze': medalInfoForCountry['bronze'], 'city' : cityOfGames });
+      } else {
+        medals.push({'gameYear': gameYear, 'gold': 0, 'silver': 0, 'bronze': 0, 'city' : cityOfGames });
+      }
     }
   }
+
   medals.sort((a, b) => a.gameYear - b.gameYear);
+
   return medals;
   }
 
@@ -201,107 +232,130 @@ function buildAthleteListFromACountry(countryCode, jsonData, year = 2016){
 }
 
 
+function addMovingCircleOnPath(isLongLength)  {
+
+  return function(d,i) {
+    let thisPath = d3.select(this);
+    let stoppingCercleAdded = false;
+    let randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
+    const delay = isLongLength ? Math.min(i*30,2000): i * 200;
+    let length = thisPath.node().getTotalLength();
+    thisPath.style("stroke", randomColor)
+    thisPath.transition()
+        .delay(delay)
+        .duration(1000)
+        .attr("stroke-dashoffset", 0)
+        .on("end", function() {
+          let circle = g.append("circle")
+              .attr("class",'movingCircle')
+              .attr("r", 3)
+              .attr("fill", randomColor);
+
+          
+          let startTime;
+          let animationId;
+
+          function animateCircle(timestamp) {
+            if (!startTime) startTime = timestamp;
+            let progress = timestamp - startTime;
+            let t = progress / 3000;
+          
+            if (t > 1) {
+              // console.log(t)
+              t = 0; // Reset t
+              startTime = undefined; // Reset startTime
+                if (!stoppingCercleAdded) {
+                  // add only one time a circle at the end of the path
+                  g.append("circle")
+                  .attr("class",'stoppingCircle')
+                  .attr("r", 3)
+                  .attr("fill", randomColor)
+                  .attr("transform", "translate(" + thisPath.node().getPointAtLength(length).x + "," + thisPath.node().getPointAtLength(length).y + ")");
+                  stoppingCercleAdded = true;
+
+                }
+            }
+
+            animationId = requestAnimationFrame(animateCircle); // Always schedule the next frame
+            intervalIds.push(animationId);
+            let point = thisPath.node().getPointAtLength(t * length);
+            circle.attr("transform", "translate(" + point.x + "," + point.y + ")");
+          }
+
+          requestAnimationFrame(animateCircle);
+        })        
+  }
+}
+
 function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gamesData){
   // console.log(athleteBioData);
   // Clear all intervals before removing the paths
-  intervalIds.forEach(clearInterval);
+  intervalIds.forEach(cancelAnimationFrame);
 
   // Reset the interval IDs array
   intervalIds = [];
-  d3.selectAll(".pathGroup").remove();
-  d3.selectAll(".movingCircle").remove();
-  athleteList.forEach( (athlete_id,index) => {
-    const athleteBio =  buildAthletBioFromId(athlete_id,athleteData,athleteBioData);
-    // console.log(athleteBio);
-    const athlete_path = buildAthletePath(athlete_id, athleteData);
-    
-                
-    // A path generator
-    max = 1.1;
-    min = 0.9;
+  d3.selectAll(".pathGroup, .movingCircle, .stoppingCircle").remove();
 
-    const randomInvert = Math.random() < 0.5 ? -1 : 1;
-    const randomSlope = Math.random() * (max - min + 1) + min; 
-    const randomCurve = Math.random() * (1.7 - 0.95 + 1) + min; 
+  // Create an empty object to store the paths
+  let athletePaths = [];
 
-    // Add the path
-    let randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
-    let path = g
-    .append('g')
-    .attr('class', 'pathGroup')
-    .selectAll("myPath")
-    .data(athlete_path)
-    .enter()
-    .append("path")
-      .attr("d", function(d){return pointsToPath(d, randomSlope, randomCurve, randomInvert)})
-      .attr("class","path"+athlete_id.toString())
-      .style("fill", "none")
-      .style("stroke", randomColor.toString())  
-      .style("stroke-width", 2)
-      .attr("stroke-dasharray", function() {
-        const thisPathLength = this.getTotalLength();
-        return thisPathLength + " " + thisPathLength;
-    })
-    .attr("stroke-dashoffset", function() {
-        return this.getTotalLength();
-    })
-    // .attr("marker-end", "url(#arrowhead)");
+  // Loop over the athleteList and build the paths
+  athleteList.forEach((athlete_id) => {
+    athletePaths.push({'id':athlete_id, 'path': buildAthletePath(athlete_id, athleteData)});
+  });
 
-    path.on("mouseover", function(event,d) {
-      g.selectAll(".path"+athlete_id.toString()).style("stroke-width", 6)})
-    .on("mouseout", function(event,d) {
-      g.selectAll(".path"+athlete_id.toString()).style("stroke-width", 2)})
-    .on("click", function(event,d) {
+  let isLongLength = athleteList.length > 30 ? true : false;
   
-      // Get the athlete id from the path
-      const athlete_id = d3.select(this).attr("class").split("path")[1];
-      // console.log(athlete_id);
-      
-      const medalsData = buildAthleteMedalFromId(athlete_id, athleteData, gamesData);
-      drawJourneyFromMedalsData(medalsData);
-      const athleteBio =  buildAthletBioFromId(athlete_id,athleteData,athleteBioData);
-      displayBio(athleteBio);
-      
-    })
-    .append('title')
-    .text(d => getAthleteInfoFromId(athlete_id, athleteData));
 
-    // console.log(path);  
-    path.each(function(d, i) {
-      let thisPath = d3.select(this);
-      // .attr("marker-end", "none")
-      thisPath.transition()  // Add a transition
-          .delay(i * 1000)  // delay the transition for each path
-          .duration(1000)  // Set the duration of the transition
-          .attr("stroke-dashoffset", 0)
-          .on("end", function() {
-            let intervalId = setInterval(function() {
-                // Add a circle that moves along the path
-                let circle = g.append("circle")
-                    .attr("class",'movingCircle')
-                    .attr("r", 3)  // Set the radius of the circle
-                    .attr("fill", randomColor.toString());  // Set the fill color of the circle
+  let path = g.selectAll("myPath")
+              .data(athletePaths)
+              .join("path")
+              .attr("class", "pathGroup")
+              .attr("d", function(d){
+              // A path generator
+                const max = 1.1;
+                const min = 0.9;
 
-                circle.transition()  // Add a transition
-                    .duration(2500)  // Set the duration of the transition
-                    .attrTween("transform", function() {
-                        let length = thisPath.node().getTotalLength();
-                        return function(t) {
-                            let point = thisPath.node().getPointAtLength(t * length);
-                            return "translate(" + point.x + "," + point.y + ")";
-                        };
-                  })
-                  // .on("end", function() {
-                  //     circle.remove();  // Remove the circle when the transition ends
-                  // });
-          }, 3000);
-          // Add the interval ID to the array
-        intervalIds.push(intervalId);
-      });
-    });
+                const randomInvert = Math.random() < 0.5 ? -1 : 1;
+                const randomSlope = Math.random() * (max - min + 1) + min; 
+                const randomCurve = Math.random() * (1.7 - 0.95 + 1) + min; 
+                
+                return pointsToPath(d.path, randomSlope, randomCurve, randomInvert)})
+              .attr("id",d => "path"+d.id.toString())
+              .style("fill", "none")
+              .style("stroke-width", 2)
+              .attr("stroke-dasharray", function() {
+                  const thisPathLength = this.getTotalLength();
+                  return thisPathLength + " " + thisPathLength;
+              })
+              .attr("stroke-dashoffset", function() {
+                  return this.getTotalLength();
+              })
+              
+              .each(addMovingCircleOnPath(isLongLength));
 
+            // const allPath = g.selectAll("#path"+athlete_id.toString());
+            path.on("mouseover", function(event,d) {
+                  const allPath = d3.selectAll("#path"+event.id);
+                  allPath.style("stroke-width", 6)})
+                
+                .on("mouseout", function(event,d) {
+                  const allPath = d3.selectAll("#path"+event.id);
+                  allPath.style("stroke-width", 2)})
+                  
+                .on("click", function(event,d) {
+            
+                // Get the athlete id from the path
+                const athlete_id = event.id;
+                console.log(athlete_id);
+                
+                const medalsData = buildAthleteMedalFromId(athlete_id, athleteData, gamesData);
+                drawJourneyFromMedalsData(medalsData);
+                const athleteBio =  buildAthletBioFromId(athlete_id,athleteData,athleteBioData);
+                displayBio(athleteBio);
+                
+              })
 
-    });
 }
 
 function mapRange(value) {
@@ -494,15 +548,19 @@ function getCountryCodeFromCountryMapName(countryMapName,olympicsCountryData,isO
   if (countryMapName === "Greenland"){
     countryMapName = "Denmark";
   }
-  let inter_code;
+
+  let inter_code = olympicsCountryData.filter(d => d['map_name'] === countryMapName)[0]['inter_code'];  
+
+
   if (!isOlympicCode){
-     inter_code = olympicsCountryData.filter(d => d['map_name'] === countryMapName)[0]['inter_code'];
-  } else{
-    inter_code = olympicsCountryData.filter(d => d['map_name'] === countryMapName)[0]['country_noc'];
+    return inter_code;
+  }else{
+    const country_noc_list = olympicsCountryData.filter(d => d['inter_code'] === inter_code).map(d => d['country_noc']);
+    // console.log(country_noc_list);
+    return country_noc_list;
   }
-  
-  return inter_code;
 }
+
 // Declare a variable to hold the interval IDs
 let intervalIds = [];
 id_to_plot = ["103315","11524","127932","47512","133746"];
