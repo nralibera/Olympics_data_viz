@@ -46,8 +46,8 @@ const pattern = svg.append('defs')
 pattern.append('circle')
   .attr('cx', 2)
   .attr('cy', 2)
-  .attr('r', 1.3)
-  .attr('fill', 'rgba(189, 195, 199, 1)');
+  .attr('r', 1)
+  // .attr('fill', 'rgba(189, 195, 199, 1)');
 
 const redPattern = svg.append('defs')
 .append('pattern')
@@ -59,8 +59,8 @@ const redPattern = svg.append('defs')
   redPattern.append('circle')
 .attr('cx', 2)
 .attr('cy', 2)
-.attr('r', 1.3)
-.attr('fill', 'red');
+.attr('r', 1)
+// .attr('fill', 'red');
 
 // Function to get the athlete name from the id
 function getAthleteInfoFromId(athleteId, jsonData){
@@ -238,7 +238,7 @@ function addMovingCircleOnPath(isLongLength)  {
     let thisPath = d3.select(this);
     let stoppingCercleAdded = false;
     let randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
-    const delay = isLongLength ? Math.min(i*30,2000): i * 200;
+    const delay = isLongLength ? Math.min(i*30,2000): i * 500;
     let length = thisPath.node().getTotalLength();
     thisPath.style("stroke", randomColor)
     thisPath.transition()
@@ -332,7 +332,11 @@ function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gam
                   return this.getTotalLength();
               })
               
-              .each(addMovingCircleOnPath(isLongLength));
+              .each(addMovingCircleOnPath(isLongLength))
+              
+
+            path.append('title')
+              .text(d => getAthleteInfoFromId(d.id, athleteData) );
 
             // const allPath = g.selectAll("#path"+athlete_id.toString());
             path.on("mouseover", function(event,d) {
@@ -347,7 +351,6 @@ function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gam
             
                 // Get the athlete id from the path
                 const athlete_id = event.id;
-                console.log(athlete_id);
                 
                 const medalsData = buildAthleteMedalFromId(athlete_id, athleteData, gamesData);
                 drawJourneyFromMedalsData(medalsData);
@@ -386,23 +389,22 @@ function drawJourneyFromMedalsData(medalsData){
       .domain(groups)
       .range([0, svg_width])
 
+  // console.log(groups)
   const xAxis = graph.append("g")
     .attr("transform", "translate(0," + svg_height*0.9 + ")")
     .attr("class","axis")
     .call(d3.axisBottom(x))
-     // adjust this value as needed
+    .transition()  // Add transition for a smooth effect
+    
 
   const fontSize = Math.min(Math.max(x.bandwidth() / 20, 10), 16); 
 
   // Customize tick labels
   xAxis.selectAll("text")
   .attr("y", -mapRange(fontSize))
-  .style("font-family", "Poppins")  // replace with your desired font
-  .style("font-weight", "bold")
   .style("font-size", function(d) {  // adjust this value as needed
     return fontSize + "px"; 
   })
-
 
   // Add Y axis
   const maxY = 5;
@@ -447,11 +449,16 @@ function drawJourneyFromMedalsData(medalsData){
     .attr("transform", function(d) { return "translate(" + x(d.gameYear+ ' : '+ d.city) + ",0)"; })
     .selectAll("rect")
     .data(function(d) { return subgroups.map(function(key) { return {key: key, value: d[key]}; }); })
-    .enter()
-    .append("g")
+
+
     
-    bar.append("rect")
-      .attr("x", function(d) { return xSubgroup(d.key); })
+    bar.join(
+      enter => enter.append('rect')
+                    .attr("x", function(d) { return xSubgroup(-d.key); })
+                    .call(enter => enter.transition(3000)
+                    .attr("x", function(d) { return xSubgroup(d.key); }))
+    )
+      // .attr("x", function(d) { return xSubgroup(d.key); })
       .attr("y", function(d) { return y(0+0.7); })
       .attr("width", xSubgroup.bandwidth())
       .attr("height", y(maxY-1))//function(d) { return height - y(d.value); })
@@ -460,18 +467,25 @@ function drawJourneyFromMedalsData(medalsData){
       .attr("ry", 3) // arrondit les coins verticalement
       .attr("transform", "translate(" + (-xSubgroup.bandwidth() / 2) + "," + (-y(4)) + ")");
 
-    bar.append('text')
+    bar.join(
+      enter => enter.append('text')
+                    .attr("x", function(d) { return xSubgroup(-d.key); })
+                    .call(enter => enter.transition(3000)
+                    .attr("x", function(d) { return xSubgroup(d.key); }))
+    )
       .text(function(d) { return d.value; })
-      .attr("x", function(d) { return xSubgroup(d.key); })
+      // .attr("x", function(d) { return xSubgroup(d.key); })
       .attr("y", function(d) { return  y(1+0.7) + y(maxY-1) / 2; })
       .attr("text-anchor", "middle")
       .style("font-family", "Poppins")  
       .style("font-weight", "bold")
       .style("font-size", "12px")
-      .style("fill", "darkblue")
+      .style("fill", "black")
       .attr("dominant-baseline", "middle")
 
-  // Show the same amount of dot per medal number on each categories
+
+
+        // Show the same amount of dot per medal number on each categories
 
   dots_bar = graph.append("g")
   .attr("class","bar")
@@ -493,32 +507,36 @@ function drawJourneyFromMedalsData(medalsData){
     d3.select(this)
       .selectAll('circle')
       .data(d3.range(medalType.value)) // create an array with as many elements as d.value
-      .enter()
-      .append('circle')
-      .attr("cx", function(d,i) { 
-        let xCorrd;
-        if (medalType.value > 18) {
-          const bandwidth = xSubgroup.bandwidth();
-           xCorrd = i < 18 ? xSubgroup(medalType.key) - bandwidth / 4 : xSubgroup(medalType.key) + bandwidth / 4;
-           if (medalType.value > 36){
-            xCorrd = i < 18 ? xSubgroup(medalType.key) - bandwidth / 4 : i < 36 ? xSubgroup(medalType.key) : xSubgroup(medalType.key) + bandwidth / 4;
-           }
-        } else {
-           xCorrd = xSubgroup(medalType.key)
-        };
-        return xCorrd } ) // adjust as needed
-      .attr("cy",  function (d, i) { return yDots(i%18); })
-      .attr("r", function(d,i) { 
-        let radius;
-        if (medalType.value > 36) {
-            radius = 2;
-        } else {
-            radius = 2.5;
-        };
-        return radius } )
-      .style("fill", function (d) { return color(medalType.key) } ) // adjust as needed
-  });
+      .join(
+        enter => 
+        enter.append('circle')
+            .attr("cx", function(d,i) { 
+            let xCorrd;
+            if (medalType.value > 18) {
+              const bandwidth = xSubgroup.bandwidth();
+              xCorrd = i < 18 ? xSubgroup(medalType.key) - bandwidth / 4 : xSubgroup(medalType.key) + bandwidth / 4;
+              if (medalType.value > 36){
+                xCorrd = i < 18 ? xSubgroup(medalType.key) - bandwidth / 4 : i < 36 ? xSubgroup(medalType.key) : xSubgroup(medalType.key) + bandwidth / 4;
+              }
+            } else {
+              xCorrd = xSubgroup(medalType.key)
+            };
+            return xCorrd } ) // adjust as needed
+          .attr("cy", 100 )
+          .attr("r", function(d,i) { 
+            let radius;
+            if (medalType.value > 36) {
+                radius = 2;
+            } else {
+                radius = 2.5;
+            };
+            return radius } )
+          .style("fill", function (d) { return color(medalType.key) } )
+          .call(enter => enter.transition(3000)
+                .attr("cy", function (d, i) { return yDots(i%18); }))
+      )
 
+  });
     }
 
 function buildAthletBioFromId(athleteId,athleteData,athleteBioData){
@@ -536,6 +554,7 @@ function displayBio(bio){
   const bioDiv = d3.select(".bio");
   bioDiv.selectAll("div").remove();
   bioDiv.html(`
+  <h2> Athlete Information </h2>
   <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Name:</span> ${bio.name}</div>
   <div class = 'bioInformation'><span style="font-weight: bold; text-decoration: underline;"> Sports:</span> ${bio.sport_type}</div>
   <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Date of Birth:</span> ${bio.born}</div>
@@ -550,7 +569,6 @@ function getCountryCodeFromCountryMapName(countryMapName,olympicsCountryData,isO
   }
 
   let inter_code = olympicsCountryData.filter(d => d['map_name'] === countryMapName)[0]['inter_code'];  
-
 
   if (!isOlympicCode){
     return inter_code;
@@ -606,7 +624,7 @@ Promise.all([
          
         countriesPath.on("click", function(event, d) {
           const bioDiv = d3.select(".bio");
-          bioDiv.selectAll("div").remove();
+          bioDiv.selectAll("div, h2").remove();
           const countryName = event.properties.name;
 
           const countryCode = getCountryCodeFromCountryMapName(countryName,olympicsCountryData);
