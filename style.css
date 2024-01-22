@@ -96,6 +96,10 @@ input{
   stroke: rgba(134, 160, 255, 0.236);
 }
 
+.country:hover{
+  cursor: pointer;
+}
+
 .suggestions {
   background-color: rgba(4, 1, 48, 0.671);
 }
