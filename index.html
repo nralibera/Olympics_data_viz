@@ -6,7 +6,6 @@
     <link rel="stylesheet"
     href="https://fonts.googleapis.com/css?family=Poppins">
     <title>World Athlete Map</title>
-    <!-- <script type="text/javascript" src="athlete_data.json"></script> -->
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="https://d3js.org/topojson.v1.min.js"></script>
     <script src="app.js" defer></script>
@@ -18,7 +17,11 @@
 <body>
     <div class = 'mapAndOptions'>   
         <div class = 'title'>World Athlete Map</div>
-        <div class = 'map'></div>
+        <div class = 'athleteSelection'>
+            <div class="optionChoice"> </div>
+        </div>
+        
+        <div class = 'map'></div>   
     </div>
     <div class="bio"></div>
     <div id="loading">

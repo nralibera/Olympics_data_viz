@@ -6,6 +6,7 @@ body {
   font-family: 'Poppins', sans-serif;
   overflow: hidden;
   background-color: rgb(2, 0, 22);
+  color : white;
 }
 
 h2{
@@ -16,7 +17,76 @@ h2{
   color: rgb(255, 255, 255);
 }
 
+.selectedAthletes{
+  display:flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 40vw;
+  height: 10vh;
+  position : absolute;
+  top: 7vh;
+  left: 18vw;
+}
+.athlete{
+  text-align: center;
+  height: 3vh;
+  margin-right: .2em;
+  margin-left: .2em;
+  padding: .2em .6em .2em .6em;
+  border-radius: .5em;
+  font-size: .7em;
+  background-color: rgb(4, 1, 48);
+}
+.athlete:hover{
+  background-color: rgb(6, 1, 68);
+  cursor: pointer;
+}
 
+.athlete:hover::after{
+  content: "Delete this athlete";
+  color: white;
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 5px;
+  margin: 1em;
+  border-radius: 5px;
+}
+
+button{
+  background-color: rgb(4, 1, 48);
+  color: white;
+  border-radius: 5px;
+  padding: 5px;
+  border: none;
+  font-size: .8em;
+  cursor: pointer;
+  font-family: 'Poppins';
+}
+button:hover{
+  background-color: rgb(6, 1, 68);
+}
+
+input{
+  background-color: rgb(255, 255, 255);
+  color:  rgb(4, 1, 48);
+  border-radius: 5px;
+  padding: 5px;
+  border: none;
+  font-size: .8em;
+  font-family: 'Poppins';
+  width: 10vw;
+  margin-bottom: .5em;
+}
+
+.optionChoice{
+  position: absolute;
+  top: 7vh;
+  left: 2vw;
+  width: 15vw;
+  height: 5vh;
+  overflow: visible;
+
+}
 .rootSvg{
   background-color: rgb(2, 0, 29);
   border-radius: 15px;
@@ -24,6 +94,23 @@ h2{
 }
 .country{
   stroke: rgba(134, 160, 255, 0.236);
+}
+
+.suggestions {
+  background-color: rgba(4, 1, 48, 0.671);
+}
+
+.suggestions div{
+  font-size: .8em;
+  padding: .2em 1em .2em 0;
+  /* margin-bottom: .05em; */
+  border-bottom-right-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+
+.suggestions div:hover{
+  background-color: rgba(6, 1, 68, 0.671);
+  cursor: pointer;
 }
 
 #greyDots{
@@ -54,6 +141,7 @@ h2{
   stroke-width: 6;
 }
 
+/* DESCRIPTION STYLING */
 
 .bio{
   display: flex;

@@ -1,6 +1,6 @@
 // the map
 const width = window.innerWidth*0.7;
-const height = window.innerHeight*0.85;
+const height = window.innerHeight*0.8;
 
 const rootSvg = d3.select('.map')    
               .append('svg')
@@ -13,7 +13,8 @@ const svg = d3.select('.rootSvg')
     .append('svg')
     .attr('class' , 'svg')
     .attr('width', width)
-    .attr('height', height*0.67);
+    .attr('height', height*0.67)
+    .attr('y', height*0.025)
 
 // Group for the map
 const g = svg.append('g');
@@ -26,7 +27,7 @@ const graph = rootSvg.append('svg')
                   .attr('y', height*0.6);
  
  // Projection
-const projection = d3.geoMercator().scale(160).translate([width / 2, height / 1.9]);
+const projection = d3.geoMercator().scale(150).translate([width / 2, height / 2]);
 const pathGenerator = d3.geoPath(projection);
 
 // Zoom
@@ -291,6 +292,10 @@ function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gam
   // console.log(athleteBioData);
   // Clear all intervals before removing the paths
   intervalIds.forEach(cancelAnimationFrame);
+  const bioDiv = d3.select(".bio");
+  bioDiv.selectAll("div, h2").remove();
+  graph.selectAll(".bar").remove();
+  graph.selectAll(".axis").remove();
 
   // Reset the interval IDs array
   intervalIds = [];
@@ -374,6 +379,8 @@ function drawJourneyFromMedalsData(medalsData){
   // Clean Graph before redrawing
   graph.selectAll(".bar").remove();
   graph.selectAll(".axis").remove();
+  const bioDiv = d3.select(".bio");
+  bioDiv.selectAll("div, h2").remove();
 
   const svg_width = width*0.8 // - margin.left - margin.right,
   const svg_height = 120 // - margin.top - margin.bottom;
@@ -586,6 +593,7 @@ id_to_plot = ["103315","11524","127932","47512","133746"];
 // Show the loading screen
 document.getElementById('loading').style.display = 'block';
 
+
 Promise.all([
   d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json'),
   d3.json('./athlete_data_medals.json'),
@@ -595,12 +603,15 @@ Promise.all([
   d3.csv('./Olympics Data From 1986 to 2022/Olympics_Country.csv')
 ]).then(([data, athleteData, athleteBioData, medalCountryData, gamesData, olympicsCountryData]) => {
 
+
         document.getElementById('loading').style.display = 'none';
         const countries = topojson.feature(data, data.objects.countries);
-        // console.log(countries);
-        // const athlete_id = "103315";
         
-        
+        const bioDiv = d3.select(".bio");
+        bioDiv.selectAll("div, h2").remove();
+        graph.selectAll(".bar").remove();
+        graph.selectAll(".axis").remove();
+
         const countriesPath = g.selectAll('path')
             .data(countries.features)
             .enter()
@@ -623,8 +634,7 @@ Promise.all([
 
          
         countriesPath.on("click", function(event, d) {
-          const bioDiv = d3.select(".bio");
-          bioDiv.selectAll("div, h2").remove();
+
           const countryName = event.properties.name;
 
           const countryCode = getCountryCodeFromCountryMapName(countryName,olympicsCountryData);
@@ -636,6 +646,91 @@ Promise.all([
         
           drawJourneyFromMedalsData(countryMedals);
         });
+        // add a option to select a list of athletes
+        const allAthleteList = Object.keys(athleteData).map(function(d) {return {'id': d, 'name': athleteData[d]['athlete_name']}});
+        const optionDiv = d3.select(".optionChoice");
+        const listOfAthletesToDisplay = [];
+        const selectedAthletesDiv = d3.select(".athleteSelection").append("div").attr("class", "selectedAthletes");
+        // Create search input
+        let searchInput = optionDiv.append("input")
+        .attr("type", "text")
+        .attr("placeholder", "Search for athletes..")
+        .on("input", updateSuggestions);
+
+        let suggestionBox = optionDiv.append("div").attr("class", "suggestions");
+
+        //make a button to update the graph
+        let updateButton = optionDiv.append("button")
+        .attr("class", "updateButton")
+        .text("Update Map")
+        .on("click", function() {
+          
+          drawPathFromAnAthleteList(listOfAthletesToDisplay, athleteData, athleteBioData, gamesData);
+        })
+
+        
+
+function updateSuggestions() {
+  let filter = this.value.toUpperCase();
+  if (filter === "") {
+    suggestionBox.selectAll("div").remove();
+    return;
+  }
+  let matchedAthletes = allAthleteList.filter(function(d) {
+    let txtValue = d.name.toUpperCase();
+    return txtValue.indexOf(filter) > -1;
+  });
+
+  // Shuffle the matched athletes
+  matchedAthletes = matchedAthletes.sort(() => Math.random() - 0.5);
+  // Limit the number of suggestions to 10
+  matchedAthletes = matchedAthletes.slice(0, 10);
+
+  let suggestions = suggestionBox.selectAll("div")
+    .data(matchedAthletes, function(d) { return d.id; });
+
+  suggestions.exit().remove();
+
+  suggestions.enter().append("div")
+    .merge(suggestions)
+    .text(function(d) { return d.name; })
+    .on("click", function(d) {
+      // Handle selection
+      searchInput.property("value", "");
+      suggestionBox.selectAll("div").remove();
+      if (!listOfAthletesToDisplay.includes(d.id)) {
+        listOfAthletesToDisplay.push(d.id);
+      }
+      updateSelectedAthletes(listOfAthletesToDisplay,athleteData);
+    });
+}
 
         drawPathFromAnAthleteList(id_to_plot, athleteData, athleteBioData, gamesData);
 });
+
+function filterOptions() {
+  let filter = this.value.toUpperCase();
+  options.style("display", function(d) {
+    let txtValue = d.name.toUpperCase();
+    return txtValue.indexOf(filter) > -1 ? "" : "none";
+  });
+}
+
+
+// Function to update the display of selected athletes
+function updateSelectedAthletes(listOfAthletesToDisplay,jsonData) {
+  let athletes = d3.select(".selectedAthletes")
+    .selectAll("div")
+    .data(listOfAthletesToDisplay);
+
+  athletes.exit().remove();
+
+  athletes.enter().append("div").attr("class", "athlete")
+    .merge(athletes)
+    .on("click", function(d) {
+      // Handle removal
+      listOfAthletesToDisplay.splice(listOfAthletesToDisplay.indexOf(d), 1);
+      updateSelectedAthletes(listOfAthletesToDisplay,jsonData);
+    })
+    .text(function(d) { return getAthleteInfoFromId(d, jsonData); }) ;
+}
