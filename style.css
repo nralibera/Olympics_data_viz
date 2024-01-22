@@ -38,6 +38,49 @@ h2{
   left: 67vw;
 }
 
+.readMeButton{
+  position : absolute;
+  width: 4.8vw;
+  top: 12vh;
+  left: 67vw;
+}
+
+.readMeButton:hover{
+  cursor: pointer;
+}
+
+.readmePopup{
+  display: none;
+
+}
+.readmePopupOpen{
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 5vh 5vw 5vh 5vw;
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(2, 0, 22, 0.916);
+  z-index: 100;
+}
+
+.readmePopupOpen div{
+  padding: 0.5vh 0.5vw 0.5vh 0.5vw;
+  /* background-color: #555; */
+  width: 60vw;
+}
+
+.readmePopupOpen button{
+position: absolute  ;
+width: 5vw;
+left: 90vw;
+top: 5vh;
+color: tomato;
+}
+
+
 .athlete{
   text-align: center;
   height: 3vh;
@@ -51,6 +94,26 @@ h2{
 .athlete:hover{
   background-color: rgb(6, 1, 68);
   cursor: pointer;
+}
+.legend{
+  position: absolute;
+  top: 37vh;
+  left: 2vw;
+  width: 8vw;
+  height: 25vh;
+  overflow: visible;
+  font-size: .6em;
+  text-align: center;
+}
+
+.legendItem{
+  border-radius: 5px;
+  margin: .5em;
+}
+
+.legendItem:hover{
+  cursor: pointer;
+  width: 8.2vw;
 }
 
 .athlete:hover::after{
@@ -72,6 +135,7 @@ button{
   font-size: .8em;
   cursor: pointer;
   font-family: 'Poppins';
+  margin-right: 1em;
 }
 button:hover{
   background-color: rgb(6, 1, 68);
@@ -102,10 +166,16 @@ input{
 }
 
 .rootSvg{
+  display: flex ;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   background-color: rgb(2, 0, 29);
   border-radius: 15px;
-  padding: 1em;
+  padding: 0 1em 1em 1em;
+  margin-top: 9vh;
 }
+
 .country{
   stroke: rgba(134, 160, 255, 0.236);
 }
@@ -146,7 +216,7 @@ input{
 .mapAndOptions{
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
+  justify-content: flex-start;
   align-items: center;
   height: 100vh;
   width: 70vw;

@@ -1,6 +1,6 @@
 // the map
 const width = window.innerWidth*0.7;
-const height = window.innerHeight*0.8;
+const height = window.innerHeight*0.9;
 
 const rootSvg = d3.select('.map')    
               .append('svg')
@@ -13,7 +13,7 @@ const svg = d3.select('.rootSvg')
     .append('svg')
     .attr('class' , 'svg')
     .attr('width', width)
-    .attr('height', height*0.67)
+    .attr('height', height*0.6)
     .attr('y', height*0.025)
 
 // Group for the map
@@ -23,11 +23,12 @@ const g = svg.append('g');
 // SVG for the graph
 const graph = rootSvg.append('svg')
                   .attr('class' , 'graph')
+                  .attr('width', width)
                   .attr('x', width*0.1)
-                  .attr('y', height*0.6);
+                  .attr('y', height*0.63);
  
  // Projection
-const projection = d3.geoMercator().scale(150).translate([width / 2, height / 2]);
+const projection = d3.geoMercator().scale(150).translate([width / 2, height / 2.2]);
 const pathGenerator = d3.geoPath(projection);
 
 // Zoom
@@ -148,27 +149,30 @@ function pointsToPath(linePropObject, randomSlope, randomCurve, randomInvert) {
           ' ' + toX + ' ' + toY;
   }
 
-
-function buildAthleteMedalFromId(athleteId, jsonData, gamesData, year = null){
-  let medals = [];
-  const athleteInfo = jsonData[athleteId.toString()];
-  // console.log(athleteInfo);
+  function buildAthleteMedalFromId(athleteId, jsonData, gamesData, year = null){
+    const medals = [];
+    const athleteInfo = jsonData[athleteId];
   
-  for (let gameYear in athleteInfo['games_participation']) {
-      
+    // Create a lookup object from the gamesData array
+    const gamesLookup = {};
+    gamesData.forEach(game => {
+      gamesLookup[game['edition_id']] = game['city'];
+    });
+  
+    for (let gameYear in athleteInfo['games_participation']) {
       const gameDetails = athleteInfo['games_participation'][gameYear];
-      const cityOfGames = gamesData.filter(d => d['edition_id'] === gameDetails['games_id'].toString())[0]['city'];
-      const gold =  gameDetails['gold'];
-      const silver = gameDetails['silver'];
-      const bronze = gameDetails['bronze'];
-
+      // Use the lookup object to find the city of the games
+      const cityOfGames = gamesLookup[gameDetails['games_id']];
+      const { gold, silver, bronze } = gameDetails;
+  
       if (year === null || gameYear >= year) {
         medals.push({'gameYear': gameYear, 'gold': gold, 'silver': silver, 'bronze': bronze, 'city': cityOfGames});
       }
     }
+  
+    return medals;
+  }
 
-return medals;
-}
 
 function buildYearParticipationFromAthleteList(athleteList, jsonData){
   let yearParticipation = new Set();
@@ -233,14 +237,37 @@ function buildAthleteListFromACountry(countryCode, jsonData, year = 2016){
 }
 
 
-function addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteData,athleteBioData)  {
+function addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteBioData,drawLegend = false)  {
 
   return function(d,i) {
     let thisPath = d3.select(this);
     let stoppingCercleAdded = false;
     let randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
-    const delay = isLongLength ? Math.min(i*30,2000): i * 500;
     let length = thisPath.node().getTotalLength();
+
+    const athlete_id = thisPath._groups[0][0].id.replace("path","");
+
+    const delay = isLongLength ? Math.min(i*30,2000): i * 500;
+
+    if(drawLegend){
+      const allPath = d3.selectAll("#path"+athlete_id);
+      legendDiv = d3.select(".legend");
+      legendDiv.append("div")
+      .attr("class","legendItem")
+      .text(getAthleteInfoFromId(athlete_id, athleteData))
+      .style("background-color", randomColor)
+      .on("mouseover", function(event,d) {
+        allPath.style("stroke-width", 6)})
+      .on("mouseout", function(event,d) {
+        allPath.style("stroke-width", 2)})
+      .on("click", function(event,d) {
+        const medalsData = buildAthleteMedalFromId(athlete_id, athleteData, gamesData);
+        const athleteBio =  buildAthletBioFromId(athlete_id,athleteData,athleteBioData);
+        drawJourneyFromMedalsData(medalsData);
+        displayBio(athleteBio);
+        })
+    } 
+
     thisPath.style("stroke", randomColor)
     thisPath.transition()
         .delay(delay)
@@ -274,10 +301,9 @@ function addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteData,
                   .attr("fill", randomColor)
                   .attr("transform", "translate(" + thisPath.node().getPointAtLength(length).x + "," + thisPath.node().getPointAtLength(length).y + ")")
                   .on("click", function(event,d) {
-                    const athlete_id = thisPath._groups[0][0].id.replace("path","");
                     const medalsData = buildAthleteMedalFromId(athlete_id, athleteData, gamesData);
-                    drawJourneyFromMedalsData(medalsData);
                     const athleteBio =  buildAthletBioFromId(athlete_id,athleteData,athleteBioData);
+                    drawJourneyFromMedalsData(medalsData);
                     displayBio(athleteBio);
                     })
                   .on("mouseover", function(event,d) {
@@ -310,9 +336,15 @@ function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gam
   intervalIds.forEach(cancelAnimationFrame);
   const bioDiv = d3.select(".bio");
   bioDiv.selectAll("div, h2").remove();
-  graph.selectAll(".bar").remove();
-  graph.selectAll(".axis").remove();
+  d3.selectAll(".bar").remove();
+  d3.selectAll(".axis").remove();
+  d3.selectAll(".legendItem").remove();
 
+  let drawLegend = false;
+
+  if (athleteList.length <16) {
+    drawLegend = true;
+  }
   // Reset the interval IDs array
   intervalIds = [];
   d3.selectAll(".pathGroup, .movingCircle, .stoppingCircle").remove();
@@ -353,7 +385,7 @@ function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gam
                   return this.getTotalLength();
               })
               
-              .each(addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteData,athleteBioData))
+              .each(addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteBioData,drawLegend))
               
 
             path.append('title')
@@ -383,10 +415,10 @@ function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gam
 }
 
 function mapRange(value) {
-  const inputMin = 12;
-  const inputMax = 16;
-  const outputMin = 42;
-  const outputMax = 48;
+  const inputMin = 22;
+  const inputMax = 30;
+  const outputMin = 52;
+  const outputMax = 60;
 
   return ((value - inputMin) / (inputMax - inputMin)) * (outputMax - outputMin) + outputMin;
 }
@@ -398,8 +430,9 @@ function drawJourneyFromMedalsData(medalsData){
   const bioDiv = d3.select(".bio");
   bioDiv.selectAll("div, h2").remove();
 
+  const margin = {top: 20, right: 30, bottom: 30, left: 60}
   const svg_width = width*0.8 // - margin.left - margin.right,
-  const svg_height = 120 // - margin.top - margin.bottom;
+  const svg_height = 120  - margin.top ;// - margin.bottom;
 
   // List of subgroups = header of the csv files = soil condition here
   const subgroups = ['gold','silver','bronze']
@@ -414,7 +447,7 @@ function drawJourneyFromMedalsData(medalsData){
 
   // console.log(groups)
   const xAxis = graph.append("g")
-    .attr("transform", "translate(0," + svg_height*0.9 + ")")
+    .attr("transform", "translate(0," + svg_height*0.55 + ")")
     .attr("class","axis")
     .call(d3.axisBottom(x))
     .transition()  // Add transition for a smooth effect
@@ -430,16 +463,16 @@ function drawJourneyFromMedalsData(medalsData){
   })
 
   // Add Y axis
-  const maxY = 5;
+  const maxY = 2;
   const y = d3.scaleLinear()
     .domain([0, maxY])
-    .range([ svg_height, 0 ]);
+    .range([ 0, svg_height ]);
 
   // Y axis for dots
   const maxYDots = 18;
   const yDots = d3.scaleLinear()
     .domain([0, maxYDots])
-    .range([ svg_height, 2*svg_height ]);
+    .range([ 2.6*svg_height/4, svg_height+2.6*svg_height/4 ]);
 
   graph.append("g")
     .attr("class","axis")
@@ -482,13 +515,13 @@ function drawJourneyFromMedalsData(medalsData){
                     .attr("x", function(d) { return xSubgroup(d.key); }))
     )
       // .attr("x", function(d) { return xSubgroup(d.key); })
-      .attr("y", function(d) { return y(0+0.7); })
+      .attr("y", function(d) { return y(0.5); })
       .attr("width", xSubgroup.bandwidth())
-      .attr("height", y(maxY-1))//function(d) { return height - y(d.value); })
+      .attr("height", y(1)/2)//function(d) { return height - y(d.value); })
       .attr("fill", function(d) { return color(d.key); })
       .attr("rx", 3)  // arrondit les coins horizontalement
       .attr("ry", 3) // arrondit les coins verticalement
-      .attr("transform", "translate(" + (-xSubgroup.bandwidth() / 2) + "," + (-y(4)) + ")");
+      .attr("transform", "translate(" + (-xSubgroup.bandwidth() / 2) + ",0)");
 
     bar.join(
       enter => enter.append('text')
@@ -498,12 +531,12 @@ function drawJourneyFromMedalsData(medalsData){
     )
       .text(function(d) { return d.value; })
       // .attr("x", function(d) { return xSubgroup(d.key); })
-      .attr("y", function(d) { return  y(1+0.7) + y(maxY-1) / 2; })
+      .attr("y", function(d) { return y(0.5+0.25); })
       .attr("text-anchor", "middle")
       .style("font-family", "Poppins")  
       .style("font-weight", "bold")
-      .style("font-size", "12px")
-      .style("fill", "black")
+      .style("font-size", "13px")
+      .style("fill", "white")
       .attr("dominant-baseline", "middle")
 
 
@@ -549,9 +582,9 @@ function drawJourneyFromMedalsData(medalsData){
           .attr("r", function(d,i) { 
             let radius;
             if (medalType.value > 36) {
-                radius = 2;
+                radius = 1.8;
             } else {
-                radius = 2.5;
+                radius = 2.1;
             };
             return radius } )
           .style("fill", function (d) { return color(medalType.key) } )
@@ -562,16 +595,19 @@ function drawJourneyFromMedalsData(medalsData){
   });
     }
 
-function buildAthletBioFromId(athleteId,athleteData,athleteBioData){
-  // console.log(athleteBioData)
-  // athleteBioData = await d3.csv('./Olympics Data From 1986 to 2022/Olympic_Athlete_Bio.csv')
-
-  const athleteBio = athleteBioData.filter(d => d['athlete_id'] === athleteId.toString())[0];
-  const athleteSport = athleteData[athleteId.toString()]['sport_type'];
-  // console.log(athleteSport);
-  athleteBio['sport_type'] = athleteSport;
-  return athleteBio;
-}
+    function buildAthletBioFromId(athleteId, athleteData, athleteBioData){
+      // Create a lookup object from the athleteBioData array
+      let bioLookup = {};
+      athleteBioData.forEach(bio => {
+        bioLookup[bio['athlete_id']] = bio;
+      });
+    
+      const athleteIdStr = athleteId.toString();
+      const athleteBio = bioLookup[athleteIdStr];
+      const athleteSport = athleteData[athleteIdStr]['sport_type'];
+      athleteBio['sport_type'] = athleteSport;
+      return athleteBio;
+    }
 
 function displayBio(bio,isCountry = false){
   const bioDiv = d3.select(".bio");
@@ -618,7 +654,7 @@ document.getElementById('loading').style.display = 'block';
 
 Promise.all([
   d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json'),
-  d3.json('./athlete_data_medals.json'),
+  d3.json('./Olympics Data From 1986 to 2022/athlete_data_medals.json'),
   d3.csv('./Olympics Data From 1986 to 2022/Olympic_Athlete_Bio.csv'),
   d3.csv('./Olympics Data From 1986 to 2022/Olympic_Games_Medal_Tally.csv'),
   d3.csv('./Olympics Data From 1986 to 2022/Olympics_Games.csv'),
@@ -626,7 +662,11 @@ Promise.all([
 ]).then(([data, athleteData, athleteBioData, medalCountryData, gamesData, olympicsCountryData]) => {
 
 
-        document.getElementById('loading').style.display = 'none';
+        d3.select('#loading')
+        .style('display', 'none');
+
+        // buildReadMe();
+
         let year = 2016;
 
         const countries = topojson.feature(data, data.objects.countries);
@@ -673,9 +713,11 @@ Promise.all([
 
         // add a option to select a list of athletes
         const allAthleteList = Object.keys(athleteData).map(function(d) {return {'id': d, 'name': athleteData[d]['athlete_name']}});
+        console.log(allAthleteList.length);
         const optionDiv = d3.select(".optionChoice");
         const listOfAthletesToDisplay = [];
-        const selectedAthletesDiv = d3.select(".athleteSelection").append("div").attr("class", "selectedAthletes");
+        const selectedAthletesDiv = d3.select(".athleteSelection");
+        selectedAthletesDiv.append("div").attr("class", "selectedAthletes");
         // Create search input
         let searchInput = optionDiv.append("input")
         .attr("type", "text")
@@ -685,7 +727,7 @@ Promise.all([
         let suggestionBox = optionDiv.append("div").attr("class", "suggestions");
 
         // Create year input
-        let yearInput = d3.select(".athleteSelection").append("input")
+        let yearInput = selectedAthletesDiv.append("input")
         .attr("type", "number")
         .attr("value", year)
         .attr("class", "yearInput")
@@ -693,14 +735,39 @@ Promise.all([
         .attr("min", "1896") // The first modern Olympics were held in 1896
         .attr("max", "2022"); // Adjust this to the current year or the latest year in your data
 
+        //Create a button to show read me
+        let readMeButton = selectedAthletesDiv.append("button")
+                          .attr("class", "readMeButton")
+                          .text("Read Me")
+                          .on("click", function() {
+                            let readmeDiv = d3.select(".readmePopup")
+                            .attr("class", "readmePopupOpen");
+                            
+                            d3.select(".readmePopupOpen button").remove();
+                            d3.select(".readmePopupOpen").append("button")
+                            .text("Close Read Me")
+                            .on("click", function() {
+                              readmeDiv.attr("class", "readmePopup") // Hide the popup when the button is clicked
+                            });
+                          });
+
+
         //make a button to update the graph
         let updateButton = optionDiv.append("button")
         .attr("class", "updateButton")
         .text("Update Map")
         .on("click", function() {
-          
         drawPathFromAnAthleteList(listOfAthletesToDisplay, athleteData, athleteBioData, gamesData);
         })
+
+        // Create a button to clear the selected athletes
+        let clearButton = optionDiv.append("button")
+        .attr("class", "clearButton")
+        .text("Clear List")
+        .on("click", function() {
+        listOfAthletesToDisplay.length = 0;
+        updateSelectedAthletes(listOfAthletesToDisplay,athleteData);
+        });
 
         
 
@@ -739,7 +806,7 @@ function updateSuggestions() {
     });
 }
 
-        drawPathFromAnAthleteList(id_to_plot, athleteData, athleteBioData, gamesData);
+    drawPathFromAnAthleteList(id_to_plot, athleteData, athleteBioData, gamesData);
 });
 
 
@@ -759,3 +826,16 @@ function updateSelectedAthletes(listOfAthletesToDisplay,jsonData) {
     })
     .text(function(d) { return getAthleteInfoFromId(d, jsonData); }) ;
 }
+
+
+// function buildReadMe() {
+//   // Create the div for the popup
+//   let readmeDiv = d3.select(".readmePopup")
+
+//   // Create the close button
+//   let closeButton = d3.select(".readmePopupOpen").append("button")
+//     .text("Close")
+//     .on("click", function() {
+//       readmeDiv.attr("class", "readmePopup") // Hide the popup when the button is clicked
+//     });
+// }
