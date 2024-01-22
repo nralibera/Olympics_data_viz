@@ -557,17 +557,23 @@ function buildAthletBioFromId(athleteId,athleteData,athleteBioData){
   return athleteBio;
 }
 
-function displayBio(bio){
+function displayBio(bio,isCountry = false){
   const bioDiv = d3.select(".bio");
   bioDiv.selectAll("div").remove();
-  bioDiv.html(`
-  <h2> Athlete Information </h2>
-  <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Name:</span> ${bio.name}</div>
-  <div class = 'bioInformation'><span style="font-weight: bold; text-decoration: underline;"> Sports:</span> ${bio.sport_type}</div>
-  <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Date of Birth:</span> ${bio.born}</div>
-  <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Country:</span> ${bio.country}</div>
-  <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Sex:</span> ${bio.sex}</div>
-  <div style="font-weight: bold; text-decoration: underline; "> Description:</div> <div class = 'bioDescription'>${bio.description}</div>  `);
+  if (isCountry){
+    console.log(bio);
+    bioDiv.html(`
+    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Country Name:</span> ${bio} </div>`);
+  }else{
+    bioDiv.html(`
+    <h2> Athlete Information </h2>
+    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Name:</span> ${bio.name}</div>
+    <div class = 'bioInformation'><span style="font-weight: bold; text-decoration: underline;"> Sports:</span> ${bio.sport_type}</div>
+    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Date of Birth:</span> ${bio.born}</div>
+    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Country:</span> ${bio.country}</div>
+    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Sex:</span> ${bio.sex}</div>
+    <div style="font-weight: bold; text-decoration: underline; "> Description:</div> <div class = 'bioDescription'>${bio.description}</div>`);
+  }
 }
 
 function getCountryCodeFromCountryMapName(countryMapName,olympicsCountryData,isOlympicCode = false){
@@ -638,14 +644,16 @@ Promise.all([
           const countryName = event.properties.name;
 
           const countryCode = getCountryCodeFromCountryMapName(countryName,olympicsCountryData);
-
           const athleteList = buildAthleteListFromACountry(countryCode, athleteData);
-          drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gamesData);
           const countryNoc = getCountryCodeFromCountryMapName(countryName,olympicsCountryData,true);
           const countryMedals = buildCountryMedalFromAthleteList(countryNoc, athleteList, athleteData, medalCountryData, gamesData);
-        
+
+
+          drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gamesData);
           drawJourneyFromMedalsData(countryMedals);
+          displayBio(countryName,true);
         });
+
         // add a option to select a list of athletes
         const allAthleteList = Object.keys(athleteData).map(function(d) {return {'id': d, 'name': athleteData[d]['athlete_name']}});
         const optionDiv = d3.select(".optionChoice");
@@ -707,14 +715,6 @@ function updateSuggestions() {
 
         drawPathFromAnAthleteList(id_to_plot, athleteData, athleteBioData, gamesData);
 });
-
-function filterOptions() {
-  let filter = this.value.toUpperCase();
-  options.style("display", function(d) {
-    let txtValue = d.name.toUpperCase();
-    return txtValue.indexOf(filter) > -1 ? "" : "none";
-  });
-}
 
 
 // Function to update the display of selected athletes
