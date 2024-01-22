@@ -739,10 +739,9 @@ function updateSelectedAthletes(listOfAthletesToDisplay,jsonData) {
     .selectAll("div")
     .data(listOfAthletesToDisplay);
 
-  athletes.exit().remove();
+    athletes.join("div")
 
-  athletes.enter().append("div").attr("class", "athlete")
-    .merge(athletes)
+    .attr("class", "athlete")
     .on("click", function(d) {
       // Handle removal
       listOfAthletesToDisplay.splice(listOfAthletesToDisplay.indexOf(d), 1);
