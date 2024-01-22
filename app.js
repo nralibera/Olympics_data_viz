@@ -233,7 +233,7 @@ function buildAthleteListFromACountry(countryCode, jsonData, year = 2016){
 }
 
 
-function addMovingCircleOnPath(isLongLength)  {
+function addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteData,athleteBioData)  {
 
   return function(d,i) {
     let thisPath = d3.select(this);
@@ -250,7 +250,8 @@ function addMovingCircleOnPath(isLongLength)  {
           let circle = g.append("circle")
               .attr("class",'movingCircle')
               .attr("r", 3)
-              .attr("fill", randomColor);
+              .attr("fill", randomColor)
+              
 
           
           let startTime;
@@ -271,7 +272,22 @@ function addMovingCircleOnPath(isLongLength)  {
                   .attr("class",'stoppingCircle')
                   .attr("r", 3)
                   .attr("fill", randomColor)
-                  .attr("transform", "translate(" + thisPath.node().getPointAtLength(length).x + "," + thisPath.node().getPointAtLength(length).y + ")");
+                  .attr("transform", "translate(" + thisPath.node().getPointAtLength(length).x + "," + thisPath.node().getPointAtLength(length).y + ")")
+                  .on("click", function(event,d) {
+                    const athlete_id = thisPath._groups[0][0].id.replace("path","");
+                    const medalsData = buildAthleteMedalFromId(athlete_id, athleteData, gamesData);
+                    drawJourneyFromMedalsData(medalsData);
+                    const athleteBio =  buildAthletBioFromId(athlete_id,athleteData,athleteBioData);
+                    displayBio(athleteBio);
+                    })
+                  .on("mouseover", function(event,d) {
+                    d3.select(this).attr("r", 5);
+                  })
+                  .on("mouseout", function(event,d) {
+                    d3.select(this).attr("r", 3);
+                  });
+
+                  
                   stoppingCercleAdded = true;
 
                 }
@@ -337,7 +353,7 @@ function drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gam
                   return this.getTotalLength();
               })
               
-              .each(addMovingCircleOnPath(isLongLength))
+              .each(addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteData,athleteBioData))
               
 
             path.append('title')
@@ -567,12 +583,12 @@ function displayBio(bio,isCountry = false){
   }else{
     bioDiv.html(`
     <h2> Athlete Information </h2>
-    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Name:</span> ${bio.name}</div>
-    <div class = 'bioInformation'><span style="font-weight: bold; text-decoration: underline;"> Sports:</span> ${bio.sport_type}</div>
-    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Date of Birth:</span> ${bio.born}</div>
-    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Country:</span> ${bio.country}</div>
-    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Sex:</span> ${bio.sex}</div>
-    <div style="font-weight: bold; text-decoration: underline; "> Description:</div> <div class = 'bioDescription'>${bio.description}</div>`);
+    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Name :</span> ${bio.name}</div>
+    <div class = 'bioInformation'><span style="font-weight: bold; text-decoration: underline;"> Sports :</span> ${bio.sport_type}</div>
+    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Date of Birth :</span> ${bio.born}</div>
+    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Country :</span> ${bio.country}</div>
+    <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Sex :</span> ${bio.sex}</div>
+    <div style="font-weight: bold; text-decoration: underline; "> Description :</div> <div class = 'bioDescription'>${bio.description}</div>`);
   }
 }
 

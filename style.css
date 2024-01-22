@@ -85,8 +85,11 @@ input{
   width: 15vw;
   height: 5vh;
   overflow: visible;
-
 }
+.stoppingCircle:hover{
+  cursor: pointer;
+}
+
 .rootSvg{
   background-color: rgb(2, 0, 29);
   border-radius: 15px;
