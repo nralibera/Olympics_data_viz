@@ -627,6 +627,8 @@ Promise.all([
 
 
         document.getElementById('loading').style.display = 'none';
+        let year = 2016;
+
         const countries = topojson.feature(data, data.objects.countries);
         
         const bioDiv = d3.select(".bio");
@@ -656,11 +658,10 @@ Promise.all([
 
          
         countriesPath.on("click", function(event, d) {
-
+          let year = yearInput.property("value");
           const countryName = event.properties.name;
-
           const countryCode = getCountryCodeFromCountryMapName(countryName,olympicsCountryData);
-          const athleteList = buildAthleteListFromACountry(countryCode, athleteData);
+          const athleteList = buildAthleteListFromACountry(countryCode, athleteData, year);
           const countryNoc = getCountryCodeFromCountryMapName(countryName,olympicsCountryData,true);
           const countryMedals = buildCountryMedalFromAthleteList(countryNoc, athleteList, athleteData, medalCountryData, gamesData);
 
@@ -683,13 +684,22 @@ Promise.all([
 
         let suggestionBox = optionDiv.append("div").attr("class", "suggestions");
 
+        // Create year input
+        let yearInput = d3.select(".athleteSelection").append("input")
+        .attr("type", "number")
+        .attr("value", year)
+        .attr("class", "yearInput")
+        .attr("placeholder", "Enter year")
+        .attr("min", "1896") // The first modern Olympics were held in 1896
+        .attr("max", "2022"); // Adjust this to the current year or the latest year in your data
+
         //make a button to update the graph
         let updateButton = optionDiv.append("button")
         .attr("class", "updateButton")
         .text("Update Map")
         .on("click", function() {
           
-          drawPathFromAnAthleteList(listOfAthletesToDisplay, athleteData, athleteBioData, gamesData);
+        drawPathFromAnAthleteList(listOfAthletesToDisplay, athleteData, athleteBioData, gamesData);
         })
 
         
