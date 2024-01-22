@@ -117,6 +117,10 @@ input{
   cursor: pointer;
 }
 
+.pathGroup:hover{
+  cursor: pointer;
+}
+
 #greyDots{
   fill: rgba(45, 11, 237, 0.452);
 }
