@@ -56,13 +56,14 @@ h2{
 .readmePopupOpen{
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
+  justify-content: space-evenly;
   align-items: center;
   padding: 5vh 5vw 5vh 5vw;
   position: absolute;
   width: 100vw;
   height: 100vh;
   background-color: rgba(2, 0, 22, 0.916);
+  font-size: small;
   z-index: 100;
 }
 

@@ -9,7 +9,8 @@
     <title>World Athlete Map</title>
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="https://d3js.org/topojson.v1.min.js"></script>
-    <script src="app.js" defer></script>
+    <script type="module" src="functions.js"></script>
+    <script type="module" src="app.js" defer></script>
     <!-- Add the stylesheet  style.css in the page-->
     <link rel="stylesheet" href="style.css">
 
@@ -44,13 +45,13 @@
         <div class="readmePopupOpen"> 
             <div>
                 <h2> Welcome to the World Athlete Map ! </h2>
-                <p> This carte displays athletes journey through their paticipation in Olympic games (Summer and Winter). </p>
+                <p> This map displays athletes journey through their paticipation in Olympic games (Summer and Winter). </p>
             </div>
 
             <div>
                 <h2> Athlete Selection </h2>
                 <p> To discover the achievements of your favorite athlete, you can use the search bar and click on the name when it is suggested. </p>
-                <p> You can select multiple athletes to draw their journey at the same time. The selected ones will be displayed next the search bar and a little click on the name will make it disapear from selection. </p>
+                <p> You can select multiple athletes to draw their journey at the same time. The selected ones will be displayed next to the search bar and a little click on the name will make it disapear from selection. </p>
             </div>
 
             <div>
@@ -65,7 +66,15 @@
 
             <div>
                 <h2> Country Selection </h2>
-                <p> More intersted in country result ? Feel free to directly click on one of them on the map. You will discover all the nationals who participated in at least the olympic games of the year value shown at the top right of the map. </p>
+                <p> More intersted in country result ? Feel free to directly click on one of them on the map. You will discover all the nationals who participated in at least the olympic games of the year shown at the top right of the map (You can also change it: if not a games year, closest year will be calculated) </p>
+            </div>
+
+            <div>
+                <h2> Credits and Socials </h2>
+                <p> Credits to <a href="https://www.kaggle.com/josephcheng123456" target="_blank">Joseph Cheng</a> for his work on the 
+                    <a href="https://github.com/josephwccheng/olympedia_web_scraping" target="_blank">data scrapping</a>. 
+                    Data is available <a href="https://www.kaggle.com/datasets/josephcheng123456/olympic-historical-dataset-from-olympediaorg" target="_blank">here</a>. <br/>
+                    Source Code <a href="https://github.com/nralibera/Olympics_data_viz" target="_blank">here</a>.  </p>
             </div>
 
         </div>
