@@ -257,9 +257,11 @@ function addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteBioDa
       .text(getAthleteInfoFromId(athlete_id, athleteData))
       .style("background-color", randomColor)
       .on("mouseover", function(event,d) {
-        allPath.style("stroke-width", 6)})
+        allPath.style("stroke-width", 6)
+        d3.select("#circle"+athlete_id).attr("r", 5)})
       .on("mouseout", function(event,d) {
-        allPath.style("stroke-width", 2)})
+        allPath.style("stroke-width", 2)
+        d3.select("#circle"+athlete_id).attr("r", 3)})
       .on("click", function(event,d) {
         const medalsData = buildAthleteMedalFromId(athlete_id, athleteData, gamesData);
         const athleteBio =  buildAthletBioFromId(athlete_id,athleteData,athleteBioData);
@@ -276,6 +278,7 @@ function addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteBioDa
         .on("end", function() {
           let circle = g.append("circle")
               .attr("class",'movingCircle')
+              .attr('id',"circle"+athlete_id)
               .attr("r", 3)
               .attr("fill", randomColor)
               
@@ -297,6 +300,7 @@ function addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteBioDa
                   // add only one time a circle at the end of the path
                   g.append("circle")
                   .attr("class",'stoppingCircle')
+                  .attr('id',"circle"+athlete_id)
                   .attr("r", 3)
                   .attr("fill", randomColor)
                   .attr("transform", "translate(" + thisPath.node().getPointAtLength(length).x + "," + thisPath.node().getPointAtLength(length).y + ")")
@@ -661,11 +665,10 @@ Promise.all([
   d3.csv('./Olympics Data From 1986 to 2022/Olympics_Country.csv')
 ]).then(([data, athleteData, athleteBioData, medalCountryData, gamesData, olympicsCountryData]) => {
 
+        d3.select('.readmePopupOpen').attr("class", "readmePopup");
+        d3.select('#loading').style('display', 'none');
 
-        d3.select('#loading')
-        .style('display', 'none');
-
-        // buildReadMe();
+        const allOlympicsYear = gamesData.map(d => d['year']);
 
         let year = 2016;
 
@@ -698,7 +701,7 @@ Promise.all([
 
          
         countriesPath.on("click", function(event, d) {
-          let year = yearInput.property("value");
+          let year = closestYear(yearInput.property("value"),allOlympicsYear);
           const countryName = event.properties.name;
           const countryCode = getCountryCodeFromCountryMapName(countryName,olympicsCountryData);
           const athleteList = buildAthleteListFromACountry(countryCode, athleteData, year);
@@ -733,7 +736,7 @@ Promise.all([
         .attr("class", "yearInput")
         .attr("placeholder", "Enter year")
         .attr("min", "1896") // The first modern Olympics were held in 1896
-        .attr("max", "2022"); // Adjust this to the current year or the latest year in your data
+        .attr("max", "2022")
 
         //Create a button to show read me
         let readMeButton = selectedAthletesDiv.append("button")
@@ -827,15 +830,8 @@ function updateSelectedAthletes(listOfAthletesToDisplay,jsonData) {
     .text(function(d) { return getAthleteInfoFromId(d, jsonData); }) ;
 }
 
-
-// function buildReadMe() {
-//   // Create the div for the popup
-//   let readmeDiv = d3.select(".readmePopup")
-
-//   // Create the close button
-//   let closeButton = d3.select(".readmePopupOpen").append("button")
-//     .text("Close")
-//     .on("click", function() {
-//       readmeDiv.attr("class", "readmePopup") // Hide the popup when the button is clicked
-//     });
-// }
+function closestYear(year,allYears){
+  return allYears.reduce(function(prev, curr) {
+    return (Math.abs(curr - year) < Math.abs(prev - year) ? curr : prev);
+  });
+}
