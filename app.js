@@ -8,11 +8,12 @@ import { getCountryCodeFromCountryMapName } from './functions.js';
 import { closestYear } from './functions.js';
 
 // import variables from './functions.js';
-import { width, height, graph, g, pathGenerator } from './functions.js';
+import { graph, g, pathGenerator } from './functions.js';
 
 // Show the loading screen
 document.getElementById('loading').style.display = 'block';
 
+// Default athletes to plot
 const id_to_plot = ["103315","11524","127932","47512","133746"];
 
 Promise.all([
@@ -23,43 +24,49 @@ Promise.all([
   d3.csv('./Olympics Data From 1986 to 2022/Olympics_Games.csv'),
   d3.csv('./Olympics Data From 1986 to 2022/Olympics_Country.csv')
 ]).then(([data, athleteData, athleteBioData, medalCountryData, gamesData, olympicsCountryData]) => {
+  
+      // Hide the readme popup and loading screen
+      d3.select('.readmePopupOpen').attr("class", "readmePopup");
+      d3.select('#loading').style('display', 'none');
 
-        d3.select('.readmePopupOpen').attr("class", "readmePopup");
-        d3.select('#loading').style('display', 'none');
+      // Extract all the years from the games data
+      const allOlympicsYear = gamesData.map(d => d['year']);
 
-        const allOlympicsYear = gamesData.map(d => d['year']);
+      // Set the initial year
+      let year = 2016;
 
-        let year = 2016;
+      // Extract the countries from the topojson data
+      const countries = topojson.feature(data, data.objects.countries);
 
-        const countries = topojson.feature(data, data.objects.countries);
-        
-        const bioDiv = d3.select(".bio");
-        bioDiv.selectAll("div, h2").remove();
-        graph.selectAll(".bar").remove();
-        graph.selectAll(".axis").remove();
+      // Select the bio div and remove all its child divs and h2 elements
+      const bioDiv = d3.select(".bio");
+      bioDiv.selectAll("div, h2").remove();
 
-        const countriesPath = g.selectAll('path')
-            .data(countries.features)
-            .enter()
-            .append('path')
-            .attr('class', 'country')
-            .attr('d', pathGenerator)
-            .attr('fill', 'url(#greyDots)')
-            
-        countriesPath.on("mouseover", function(event, d) {
-              // Change the color of the dot pattern in the hovered country
-              d3.select(this)  // select the hovered country
-                  .attr('fill', 'url(#redDots)')  // replace "#dotsRed" with the id of your red dot pattern
-          });
+      // Remove all bars and axes from the graph
+      graph.selectAll(".bar").remove();
+      graph.selectAll(".axis").remove();
 
-        countriesPath.on("mouseout",  function(event, d) {
-              // Change the color of the dot pattern back to the original color
-              d3.select(this)  // select the hovered country
-                  .attr('fill', 'url(#greyDots)');  // replace "#dots" with the id of your original dot pattern
-          });
+      // Bind the countries data to the path elements in the SVG
+      const countriesPath = g.selectAll('path')
+          .data(countries.features)
+          .enter()
+          .append('path')
+          .attr('class', 'country')
+          .attr('d', pathGenerator)
+          .attr('fill', 'url(#greyDots)')  // Fill the countries with a grey dot pattern
 
-         
-        countriesPath.on("click", function(event, d) {
+      // Change the fill of the country on mouseover to a red dot pattern
+      countriesPath.on("mouseover", function(event, d) {
+          d3.select(this).attr('fill', 'url(#redDots)');
+      });
+
+      // Change the fill of the country back to the grey dot pattern on mouseout
+      countriesPath.on("mouseout",  function(event, d) {
+          d3.select(this).attr('fill', 'url(#greyDots)');
+      });
+
+      // On click, display the bio and draw the journey of the athletes from the clicked country
+      countriesPath.on("click", function(event, d) {
           let year = closestYear(yearInput.property("value"),allOlympicsYear);
           const countryName = event.properties.name;
           const countryCode = getCountryCodeFromCountryMapName(countryName,olympicsCountryData);
@@ -67,25 +74,25 @@ Promise.all([
           const countryNoc = getCountryCodeFromCountryMapName(countryName,olympicsCountryData,true);
           const countryMedals = buildCountryMedalFromAthleteList(countryNoc, athleteList, athleteData, medalCountryData, gamesData);
 
-
           drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gamesData);
           drawJourneyFromMedalsData(countryMedals);
           displayBio(countryName,true);
-        });
+      });
 
-        // add a option to select a list of athletes
-        const allAthleteList = Object.keys(athleteData).map(function(d) {return {'id': d, 'name': athleteData[d]['athlete_name']}});
-        const optionDiv = d3.select(".optionChoice");
-        const listOfAthletesToDisplay = [];
-        const selectedAthletesDiv = d3.select(".athleteSelection");
-        selectedAthletesDiv.append("div").attr("class", "selectedAthletes");
-        // Create search input
-        let searchInput = optionDiv.append("input")
-        .attr("type", "text")
-        .attr("placeholder", "Search for athletes..")
-        .on("input", updateSuggestions);
+      // Create a list of all athletes
+      const allAthleteList = Object.keys(athleteData).map(function(d) {return {'id': d, 'name': athleteData[d]['athlete_name']}});
+      const optionDiv = d3.select(".optionChoice");
+      const listOfAthletesToDisplay = [];
+      const selectedAthletesDiv = d3.select(".athleteSelection");
+      selectedAthletesDiv.append("div").attr("class", "selectedAthletes");
 
-        let suggestionBox = optionDiv.append("div").attr("class", "suggestions");
+      // Create a search input for athletes
+      let searchInput = optionDiv.append("input")
+      .attr("type", "text")
+      .attr("placeholder", "Search for athletes..")
+      .on("input", updateSuggestions);
+
+      let suggestionBox = optionDiv.append("div").attr("class", "suggestions");
 
         // Create year input
         let yearInput = selectedAthletesDiv.append("input")

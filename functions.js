@@ -504,7 +504,7 @@ export function getAthleteInfoFromId(athleteId, jsonData){
     intervalIds = [];
   
     // Remove all path groups, moving circles, and stopping circles
-    d3.selectAll(".pathGroup, .movingCircle, .stoppingCircle").remove();
+    // d3.selectAll(" .movingCircle, .stoppingCircle").remove();
   
     // Create an empty object to store the paths
     let athletePaths = [];
@@ -518,31 +518,37 @@ export function getAthleteInfoFromId(athleteId, jsonData){
     let isLongLength = athleteList.length > 30 ? true : false;
   
     // Create the paths
-    let path = g.selectAll("myPath")
-                .data(athletePaths)
-                .join("path")
-                .attr("class", "pathGroup")
-                .attr("d", function(d){
-                  // A path generator
-                  const max = 1.1;
-                  const min = 0.9;
-  
-                  const randomInvert = Math.random() < 0.5 ? -1 : 1;
-                  const randomSlope = Math.random() * (max - min + 1) + min; 
-                  const randomCurve = Math.random() * (1.7 - 0.95 + 1) + min; 
-  
-                  return pointsToPath(d.path, randomSlope, randomCurve, randomInvert)})
-                .attr("id",d => "path"+d.id.toString())
-                .style("fill", "none")
-                .style("stroke-width", 2)
-                .attr("stroke-dasharray", function() {
-                    const thisPathLength = this.getTotalLength();
-                    return thisPathLength + " " + thisPathLength;
-                })
-                .attr("stroke-dashoffset", function() {
-                    return this.getTotalLength();
-                })
-                .each(addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteBioData,drawLegend))
+    let path = g.selectAll(".pathGroup")
+                .data(athletePaths, d => d.id.toString())
+                .join(      
+                  enter => enter.append('path')
+                 .attr("class", "pathGroup")
+                  .attr("d", function(d){
+                    // A path generator
+                    const max = 1.1;
+                    const min = 0.9;
+    
+                    const randomInvert = Math.random() < 0.5 ? -1 : 1;
+                    const randomSlope = Math.random() * (max - min + 1) + min; 
+                    const randomCurve = Math.random() * (1.7 - 0.95 + 1) + min; 
+    
+                    return pointsToPath(d.path, randomSlope, randomCurve, randomInvert)})
+                  .attr("id",d => "path"+d.id.toString())
+                  .style("fill", "none")
+                  .style("stroke-width", 2)
+                  .attr("stroke-dasharray", function() {
+                      const thisPathLength = this.getTotalLength();
+                      return thisPathLength + " " + thisPathLength;
+                  })
+                  .attr("stroke-dashoffset", function() {
+                      return this.getTotalLength();
+                  })
+                  .each(addMovingCircleOnPath(isLongLength, athleteData, gamesData,athleteBioData,drawLegend))
+                  .call(removeAllCircleExceptSelection),
+                  update => update,
+                  exit => exit.remove()
+                )
+
   
     // Add a title to each path
     path.append('title')
@@ -566,6 +572,32 @@ export function getAthleteInfoFromId(athleteId, jsonData){
         })
   }
   
+/**
+ * Removes all circle elements that are not currently selected.
+ *
+ * @param {Selection} selection - The current selection of circle elements.
+ */
+function removeAllCircleExceptSelection(selection){
+  // Get the IDs of the selected circles
+  const selectedIds = selection._groups[0].map(d => d.id.replace("path","circle"));
+  
+  // Select all circles
+  const allCircles = d3.selectAll(".stoppingCircle, .movingCircle");
+  
+  // Remove all circles that are not currently selected
+  if (allCircles.length !== 0) {
+    allCircles.each(function(d, i) {
+      // Get the ID of the current circle
+      const currentId = this.id;
+  
+      // If the current ID is not in the list of selected IDs, remove the circle
+      if (!selectedIds.includes(currentId)) {
+        d3.select('#' + currentId).remove();
+      }
+    });
+  }
+}
+
   /**
    * Function to map a value from one range to another.
    * 
@@ -662,12 +694,11 @@ export function getAthleteInfoFromId(athleteId, jsonData){
         return "translate(" + (xSubgroup.bandwidth() / 2) + ",0)";
       })
       .selectAll("g")
-      .data(medalsData)
-      .enter()
-      .append("g")
+      .data(medalsData, d => d.gameYear)
+      .join("g")
       .attr("transform", function (d) { return "translate(" + x(d.gameYear + ' : ' + d.city) + ",0)"; })
       .selectAll("rect")
-      .data(function (d) { return subgroups.map(function (key) { return { key: key, value: d[key] }; }); });
+      .data(function (d) { return subgroups.map(function (key) { return { key: key, value: d[key] }; }); }, d => d.key);
   
     bar.join(
       enter => enter.append('rect')
@@ -698,7 +729,7 @@ export function getAthleteInfoFromId(athleteId, jsonData){
       .style("font-size", "13px")
       .style("fill", "white")
       .attr("dominant-baseline", "middle");
-  
+      
     // Show the dots representing the medal count
     const dots_bar = graph.append("g")
       .attr("class", "bar")
@@ -706,18 +737,16 @@ export function getAthleteInfoFromId(athleteId, jsonData){
         return "translate(" + (xSubgroup.bandwidth() / 2) + ",0)";
       })
       .selectAll("g")
-      .data(medalsData)
-      .enter()
-      .append("g")
+      .data(medalsData, d => d.gameYear)
+      .join("g")
       .attr("transform", function (d) { return "translate(" + x(d.gameYear + ' : ' + d.city) + ",0)"; })
       .selectAll("rect")
       .data(function (d) { return subgroups.map(function (key) { return { key: key, value: d[key] }; }); })
-      .enter()
-      .append("g")
+      .join("g")
       .each(function (medalType) {
         d3.select(this)
           .selectAll('circle')
-          .data(d3.range(medalType.value))
+          .data(d3.range(medalType.value), d => d)
           .join(
             enter =>
               enter.append('circle')
@@ -746,7 +775,9 @@ export function getAthleteInfoFromId(athleteId, jsonData){
                 })
                 .style("fill", function (d) { return color(medalType.key) })
                 .call(enter => enter.transition(3000)
-                  .attr("cy", function (d, i) { return yDots(i % 18); }))
+                  .attr("cy", function (d, i) { return yDots(i % 18); })),
+            update => update.style("fill","red"),
+            exit => exit.remove()
           );
       });
   }
