@@ -647,12 +647,16 @@ function removeAllCircleExceptSelection(selection){
   
     const xAxis = graph.append("g")
       .attr("transform", "translate(0," + svg_height * 0.55 + ")")
+      .attr("stroke-width", 3)
+      // .attr("stroke", "red")
       .attr("class", "axis")
-      .call(d3.axisBottom(x))
-      .transition();
+      .call(d3.axisBottom(x).tickSizeOuter(0))
+      .transition()
+        .duration(250)
   
     // Customize tick labels
     const fontSize = Math.min(Math.max(x.bandwidth() / 20, 10), 16);
+
     xAxis.selectAll("text")
       .attr("y", -mapRange(fontSize))
       .style("font-size", function (d) {
