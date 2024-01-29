@@ -177,6 +177,14 @@ input{
   margin-top: 9vh;
 }
 
+.allPathsGroup{
+  isolation: isolate;
+}
+
+.pathGroup{
+   mix-blend-mode: overlay;
+}
+
 .country{
   stroke: rgba(134, 160, 255, 0.236);
 }

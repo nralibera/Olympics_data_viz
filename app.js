@@ -79,6 +79,9 @@ Promise.all([
           displayBio(countryName,true);
       });
 
+      // Create a group to host all the paths
+      g.append('g').attr('class', 'allPathsGroup');
+
       // Create a list of all athletes
       const allAthleteList = Object.keys(athleteData).map(function(d) {return {'id': d, 'name': athleteData[d]['athlete_name']}});
       const optionDiv = d3.select(".optionChoice");
@@ -173,7 +176,7 @@ function updateSuggestions() {
       updateSelectedAthletes(listOfAthletesToDisplay,athleteData);
     });
 }
-
+    
     drawPathFromAnAthleteList(id_to_plot, athleteData, athleteBioData, gamesData);
 });
 

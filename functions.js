@@ -21,6 +21,9 @@ const svg = d3.select('.rootSvg')
 
 // Group for the map
 const g = svg.append('g');
+// create a group for paths
+
+
 
     
 // SVG for the graph
@@ -376,6 +379,7 @@ export function getAthleteInfoFromId(athleteId, jsonData){
   
       // Extract athlete ID from the path ID
       const athlete_id = thisPath._groups[0][0].id.replace("path", "");
+      const allPathsGroup = d3.select('.allPathsGroup');
   
       // Set delay based on index and path length
       const delay = isLongLength ? Math.min(i * 30, 2000) : i * 500;
@@ -389,12 +393,27 @@ export function getAthleteInfoFromId(athleteId, jsonData){
           .text(getAthleteInfoFromId(athlete_id, athleteData))
           .style("background-color", randomColor)
           .on("mouseover", function(event, d) {
-            allPaths.style("stroke-width", 6);
-            d3.select("#circle" + athlete_id).attr("r", 5);
+
+            d3.selectAll('.pathGroup, .stoppingCircle, .movingCircle')
+            .style('opacity', '0.2');
+
+            allPaths.style("stroke-width", 6)
+                    .style("opacity", "1");
+
+            d3.selectAll("#circle" + athlete_id)
+            .attr("r", 5)
+            .style("opacity", "1");
           })
           .on("mouseout", function(event, d) {
-            allPaths.style("stroke-width", 2);
-            d3.select("#circle" + athlete_id).attr("r", 3);
+
+            d3.selectAll('.pathGroup, .stoppingCircle, .movingCircle')
+            .style('opacity', '1');
+
+            allPaths
+            .style("stroke-width", 2);
+
+            d3.selectAll("#circle" + athlete_id)
+            .attr("r", 3);
           })
           .on("click", function(event, d) {
             const medalsData = buildAthleteMedalFromId(athlete_id, athleteData, gamesData);
@@ -412,7 +431,7 @@ export function getAthleteInfoFromId(athleteId, jsonData){
         .attr("stroke-dashoffset", 0)
         .on("end", function() {
           // Add a circle along the path
-          let circle = g.append("circle")
+          let circle = allPathsGroup.append("circle")
             .attr("class", 'movingCircle')
             .attr('id', "circle" + athlete_id)
             .attr("r", 3)
@@ -433,7 +452,7 @@ export function getAthleteInfoFromId(athleteId, jsonData){
               startTime = undefined; // Reset startTime
               if (!stoppingCircleAdded) {
                 // Add a stopping circle at the end of the path
-                g.append("circle")
+                allPathsGroup.append("circle")
                   .attr("class", 'stoppingCircle')
                   .attr('id', "circle" + athlete_id)
                   .attr("r", 3)
@@ -446,9 +465,13 @@ export function getAthleteInfoFromId(athleteId, jsonData){
                     displayBio(athleteBio);
                   })
                   .on("mouseover", function(event, d) {
-                    d3.select(this).attr("r", 5);
+                    d3.selectAll('.pathGroup, .stoppingCircle, .movingCircle')
+                      .style('opacity', '0.2');
+                    
+                    d3.select(this).attr("r", 5).style('opacity', '1');
                   })
                   .on("mouseout", function(event, d) {
+                    d3.selectAll('.pathGroup, .stoppingCircle, .movingCircle').style('opacity', '1');
                     d3.select(this).attr("r", 3);
                   });
   
@@ -489,6 +512,8 @@ export function getAthleteInfoFromId(athleteId, jsonData){
     const bioDiv = d3.select(".bio");
     bioDiv.selectAll("div, h2").remove();
   
+    const allPathsGroup = d3.select('.allPathsGroup');
+
     // Remove all bars, axes, and legend items
     d3.selectAll(".bar").remove();
     d3.selectAll(".axis").remove();
@@ -518,7 +543,7 @@ export function getAthleteInfoFromId(athleteId, jsonData){
     let isLongLength = athleteList.length > 30 ? true : false;
   
     // Create the paths
-    let path = g.selectAll(".pathGroup")
+    let path = allPathsGroup.selectAll(".pathGroup")
                 .data(athletePaths, d => d.id.toString())
                 .join(      
                   enter => enter.append('path')
@@ -556,11 +581,33 @@ export function getAthleteInfoFromId(athleteId, jsonData){
   
     // Add mouseover, mouseout, and click events to each path
     path.on("mouseover", function(event,d) {
+
+          d3.selectAll('.pathGroup, .stoppingCircle, .movingCircle')
+            .style('opacity', '0.2');
+          
           const allPath = d3.selectAll("#path"+event.id);
-          allPath.style("stroke-width", 6)})
+          
+          allPath.style("stroke-width", 6)
+                  .style("opacity", "1");
+
+          
+          d3.select("#circle" + event.id)
+            .attr("r", 5)
+            .style("opacity", "1");                
+                })
+
         .on("mouseout", function(event,d) {
+          d3.selectAll('.pathGroup, .stoppingCircle, .movingCircle')
+            .style('opacity', '1');
+
           const allPath = d3.selectAll("#path"+event.id);
-          allPath.style("stroke-width", 2)})
+          allPath.style("stroke-width", 2)
+                 .style("opacity", "1")
+          
+          d3.select("#circle" + event.id)
+            .attr("r", 3);
+                })
+
         .on("click", function(event,d) {
           // Get the athlete id from the path
           const athlete_id = event.id;
