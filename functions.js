@@ -357,7 +357,62 @@ export function getAthleteInfoFromId(athleteId, jsonData){
     // Return the list of athlete IDs
     return athleteList;
   }
+
+  function getMedalsForEachCategoryFromAthleteId(athleteId, jsonData,year){
+    const athleteInfo = jsonData[athleteId];
+    // Verify if year is among the years of participation
+    if (year in athleteInfo['games_participation']){
+      const gameDetails = athleteInfo['games_participation'][year];
+      const [givenName, familyName] = athleteInfo['athlete_name'].split(" ");
+      const gold = gameDetails['gold'];
+      const silver = gameDetails['silver'];
+      const bronze = gameDetails['bronze'];
+      const total = gold + silver + bronze;
+      return {
+        'year': year,
+        'athleteId': athleteId, 
+        'givenName': givenName, 
+        'familyName': familyName,
+        'total': total, 'gold': gold, 'silver': silver, 'bronze': bronze};
+    }else{
+      return false;
+    }
+  }
   
+
+  export function buildMedalListingInYearFromAthleteList(athleteList, jsonData, year){
+    let medalList = [];
+    for (let athleteId of athleteList){
+      const medals = getMedalsForEachCategoryFromAthleteId(athleteId, jsonData, year);
+      if (medals !== false){
+        medalList.push(medals);
+      }
+    }
+    // Sort the medalList array by first total, then gold, then silver, then bronze
+      medalList.sort((a, b) => {
+        // Sort by total
+        if (a.total > b.total) return -1;
+        if (a.total < b.total) return 1;
+    
+        // If total is equal, sort by gold
+        if (a.gold > b.gold) return -1;
+        if (a.gold < b.gold) return 1;
+    
+        // If gold is equal, sort by silver
+        if (a.silver > b.silver) return -1;
+        if (a.silver < b.silver) return 1;
+    
+        // If silver is equal, sort by bronze
+        if (a.bronze > b.bronze) return -1;
+        if (a.bronze < b.bronze) return 1;
+    
+        // If all are equal, return 0
+        return 0;
+    });
+    // medalList.sort((a, b) => b.total - a.total);
+    // console.log(medalList)
+    return medalList;
+  }
   
   /**
    * Adds a moving circle along the length of the provided SVG path.
@@ -390,6 +445,7 @@ export function getAthleteInfoFromId(athleteId, jsonData){
         const legendDiv = d3.select(".legend");
         legendDiv.append("div")
           .attr("class", "legendItem")
+          .attr("id",d => "legend"+athlete_id)
           .text(getAthleteInfoFromId(athlete_id, athleteData))
           .style("background-color", randomColor)
           .on("mouseover", function(event, d) {
@@ -494,6 +550,22 @@ export function getAthleteInfoFromId(athleteId, jsonData){
     };
   }
   
+  function removeNotInListAthleteLegend(athleteList){
+        // only remove legend of not in the list athlete based on id
+        const allLegendDisplayed = d3.selectAll(".legendItem")._groups[0];
+        let toRemoveId = [];
+        for (let i = 0; i < allLegendDisplayed.length; i++) {
+          const legendItem = allLegendDisplayed[i];
+          const id = legendItem.id.replace("legend", "");
+          // console.log(id)
+          if (!athleteList.includes(parseInt(id, 10))) {
+            toRemoveId.push("#legend"+id);
+          }
+        }
+        toRemoveId.forEach(id => {
+          d3.select(id).remove();
+        });
+  }
   
   /**
    * Function to draw a path for each athlete in a list.
@@ -517,13 +589,17 @@ export function getAthleteInfoFromId(athleteId, jsonData){
     // Remove all bars, axes, and legend items
     d3.selectAll(".bar").remove();
     d3.selectAll(".axis").remove();
-    d3.selectAll(".legendItem").remove();
+    // Remove all legend items that are not in the list 
+    removeNotInListAthleteLegend(athleteList)
+
+      
   
     // If there are fewer than 16 athletes, draw a legend
     let drawLegend = false;
     if (athleteList.length <16) {
       drawLegend = true;
     }
+    console.log(drawLegend)
   
     // Reset the interval IDs array
     intervalIds = [];
@@ -872,7 +948,7 @@ function removeAllCircleExceptSelection(selection){
    * @param {Object|string} bio - The bio data of the athlete or the name of the country.
    * @param {boolean} isCountry - A flag indicating whether the bio is for a country or an athlete.
    */
-  export function displayBio(bio, isCountry = false){
+  export function displayBio(bio, isCountry = false, medalListing = null){
     // Select the div with class 'bio'
     const bioDiv = d3.select(".bio");
   
@@ -883,6 +959,43 @@ function removeAllCircleExceptSelection(selection){
     if (isCountry){
       bioDiv.html(`
       <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Country Name:</span> ${bio} </div>`);
+
+      // if (medalListing !== null){
+      //   // Display the medal listing
+      //   bioDiv.append("h2").text("Medal Listing");
+      //   bioDiv.append("div").attr("class", "medalListing");
+      //   const medalListingDiv = bioDiv.select(".medalListing");
+      //   medalListing.forEach(medal => {
+      //     medalListingDiv.append("div").text(`${medal.givenName} ${medal.familyName} : Gold - ${medal.gold}, Silver - ${medal.silver}, Bronze - ${medal.bronze}`);
+      //   });
+      // }
+
+      if (medalListing !== null){
+        const year = medalListing[0].year;
+        // Display the medal listing as a table
+        bioDiv.append("h2").text("Medal Listing"+ " in " + year);
+        bioDiv.append("table").attr("class", "medalListing");
+        const medalListingTable = bioDiv.select(".medalListing");
+        const medalListingTableHeader = medalListingTable.append("tr").style("text-align", "center").style("font-size", ".8rem");
+        medalListingTableHeader.append("th").text("Athlete Name").style("text-align", "left");
+        medalListingTableHeader.append("th").text("Gold");
+        medalListingTableHeader.append("th").text("Silver");
+        medalListingTableHeader.append("th").text("Bronze");
+        medalListingTableHeader.append("th").text("Total");
+      
+        medalListing.forEach(medal => {
+          const medalListingTableRow = medalListingTable.append("tr").style("font-size", ".7rem").style("text-align", "center");
+          medalListingTableRow.append("td").text(`${medal.givenName} ${medal.familyName}`).style("text-align", "left");
+          medalListingTableRow.append("td").text(medal.gold);
+          medalListingTableRow.append("td").text(medal.silver);
+          medalListingTableRow.append("td").text(medal.bronze);
+          medalListingTableRow.append("td").text(medal.total);
+
+          // Add a class to the row
+          medalListingTableRow.attr('class', "row");
+          medalListingTableRow.attr('id', "row" + medal.athleteId);
+        });
+      }
     } else {
       // If the bio is for an athlete, display the athlete's information
       bioDiv.html(`

@@ -6,6 +6,7 @@ import { buildAthleteListFromACountry } from './functions.js';
 import { buildCountryMedalFromAthleteList } from './functions.js';
 import { getCountryCodeFromCountryMapName } from './functions.js';
 import { closestYear } from './functions.js';
+import { buildMedalListingInYearFromAthleteList } from './functions.js';
 
 // import variables from './functions.js';
 import { graph, g, pathGenerator } from './functions.js';
@@ -71,12 +72,14 @@ Promise.all([
           const countryName = event.properties.name;
           const countryCode = getCountryCodeFromCountryMapName(countryName,olympicsCountryData);
           const athleteList = buildAthleteListFromACountry(countryCode, athleteData, year);
+          const medalListing = buildMedalListingInYearFromAthleteList(athleteList, athleteData, year);
           const countryNoc = getCountryCodeFromCountryMapName(countryName,olympicsCountryData,true);
           const countryMedals = buildCountryMedalFromAthleteList(countryNoc, athleteList, athleteData, medalCountryData, gamesData);
+          
 
           drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gamesData);
           drawJourneyFromMedalsData(countryMedals);
-          displayBio(countryName,true);
+          displayBio(countryName,true,medalListing);
       });
 
       // Create a group to host all the paths
@@ -92,7 +95,7 @@ Promise.all([
       // Create a search input for athletes
       let searchInput = optionDiv.append("input")
       .attr("type", "text")
-      .attr("placeholder", "Search for athletes..")
+      .attr("placeholder", "Search for athletes...")
       .on("input", updateSuggestions);
 
       let suggestionBox = optionDiv.append("div").attr("class", "suggestions");
@@ -128,7 +131,7 @@ Promise.all([
         .attr("class", "updateButton")
         .text("Update Map")
         .on("click", function() {
-        drawPathFromAnAthleteList(listOfAthletesToDisplay, athleteData, athleteBioData, gamesData);
+            drawPathFromAnAthleteList(listOfAthletesToDisplay, athleteData, athleteBioData, gamesData);
         })
 
         // Create a button to clear the selected athletes
@@ -143,7 +146,7 @@ Promise.all([
         
 
 function updateSuggestions() {
-  let filter = this.value.toUpperCase();
+  let filter = this.value.toUpperCase().trim();
   if (filter === "") {
     suggestionBox.selectAll("div").remove();
     return;
