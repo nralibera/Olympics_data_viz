@@ -409,8 +409,6 @@ export function getAthleteInfoFromId(athleteId, jsonData){
         // If all are equal, return 0
         return 0;
     });
-    // medalList.sort((a, b) => b.total - a.total);
-    // console.log(medalList)
     return medalList;
   }
   
@@ -599,7 +597,7 @@ export function getAthleteInfoFromId(athleteId, jsonData){
     if (athleteList.length <16) {
       drawLegend = true;
     }
-    console.log(drawLegend)
+    // console.log(drawLegend)
   
     // Reset the interval IDs array
     intervalIds = [];
@@ -948,7 +946,7 @@ function removeAllCircleExceptSelection(selection){
    * @param {Object|string} bio - The bio data of the athlete or the name of the country.
    * @param {boolean} isCountry - A flag indicating whether the bio is for a country or an athlete.
    */
-  export function displayBio(bio, isCountry = false, medalListing = null){
+  export function displayBio(bio, isCountry = false, medalListing = null, gamesData = null){
     // Select the div with class 'bio'
     const bioDiv = d3.select(".bio");
   
@@ -960,20 +958,13 @@ function removeAllCircleExceptSelection(selection){
       bioDiv.html(`
       <div class = 'bioInformation'> <span style="font-weight: bold; text-decoration: underline;"> Country Name:</span> ${bio} </div>`);
 
-      // if (medalListing !== null){
-      //   // Display the medal listing
-      //   bioDiv.append("h2").text("Medal Listing");
-      //   bioDiv.append("div").attr("class", "medalListing");
-      //   const medalListingDiv = bioDiv.select(".medalListing");
-      //   medalListing.forEach(medal => {
-      //     medalListingDiv.append("div").text(`${medal.givenName} ${medal.familyName} : Gold - ${medal.gold}, Silver - ${medal.silver}, Bronze - ${medal.bronze}`);
-      //   });
-      // }
-
       if (medalListing !== null){
+
         const year = medalListing[0].year;
+        // Get games edition for the year
+        const edition = gamesData.filter(d => d['year'] === year)[0]['edition'];
         // Display the medal listing as a table
-        bioDiv.append("h2").text("Medal Listing"+ " in " + year);
+        bioDiv.append("h2").text("Medal for " + edition).style("font-size", "1.2rem").style("padding", "1rem 0 1rem 0");
         bioDiv.append("table").attr("class", "medalListing");
         const medalListingTable = bioDiv.select(".medalListing");
         const medalListingTableHeader = medalListingTable.append("tr").style("text-align", "center").style("font-size", ".8rem");

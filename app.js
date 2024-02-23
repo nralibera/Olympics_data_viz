@@ -79,7 +79,7 @@ Promise.all([
 
           drawPathFromAnAthleteList(athleteList, athleteData, athleteBioData, gamesData);
           drawJourneyFromMedalsData(countryMedals);
-          displayBio(countryName,true,medalListing);
+          displayBio(countryName ,true ,medalListing ,gamesData);
       });
 
       // Create a group to host all the paths
